@@ -2,7 +2,7 @@
   height: 100%;
   display: flex;
   flex-direction: column;
-
+  position: relative;
   background-image: url("../../assets/chat-wallpaper.png");
   background-size: cover;
   background-position: center;
@@ -343,4 +343,27 @@
 /* Make sure input wrap is positioning context */
 .chatInputWrap{
   position: relative;
+}
+
+
+.toBottomBtn{
+  position: absolute;
+  right: 18px;
+  bottom: 92px; /* above input bar */
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  border: 1px solid rgba(0,0,0,0.10);
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 14px 35px rgba(0,0,0,0.14);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  font-size: 18px;
+  z-index: 40;
+}
+
+.toBottomBtn:hover{
+  background: rgba(255,255,255,1);
 }

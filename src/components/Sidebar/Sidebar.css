@@ -50,3 +50,46 @@
   font-size: 13px;
   color: var(--muted);
 }
+
+.sidebarMenuWrap{
+  position: relative;
+}
+
+.sidebarMenuDropdown{
+  position: absolute;
+  left: 0;
+  top: 44px;
+  min-width: 190px;
+  background: rgba(255,255,255,0.95);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(0,0,0,0.06);
+  box-shadow: 0 16px 40px rgba(0,0,0,0.14);
+  border-radius: 14px;
+  overflow: hidden;
+  z-index: 50;
+}
+
+.sidebarMenuItem{
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  font-size: 14px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.sidebarMenuItem:hover{
+  background: rgba(0,0,0,0.05);
+}
+
+.sidebarMenuDivider{
+  height: 1px;
+  background: rgba(0,0,0,0.08);
+  margin: 6px 0;
+}
+
+.sidebarMenuItem.danger{
+  color: #ef4444;
+  font-weight: 600;
+}

@@ -142,6 +142,9 @@ export default function ChatPanel({ chatId, onBack }) {
   const inputRef = useRef(null);
   const emojiRef = useRef(null);
   const msgRefs = useRef({});
+  const [showToBottom, setShowToBottom] = useState(false);
+  const chatBodyRef = useRef(null);
+  const didInitialScrollRef = useRef(false);
 
 
   // Listen chat doc
@@ -171,8 +174,16 @@ export default function ChatPanel({ chatId, onBack }) {
 
   // Auto-scroll
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    // only auto-scroll if user is already near bottom
+    const el = chatBodyRef.current;
+    if (!el) return;
+
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    const nearBottom = distanceFromBottom < 120;
+
+    if (nearBottom) scrollToBottom("smooth");
   }, [messages.length]);
+
 
   // Keep unread at 0 while inside chat
   useEffect(() => {
@@ -221,6 +232,20 @@ export default function ChatPanel({ chatId, onBack }) {
     return () => document.removeEventListener("mousedown", onDocClick);
   }, [emojiOpen]);
 
+  useEffect(() => {
+    if (!chatId) return;
+    didInitialScrollRef.current = false;
+  }, [chatId]);
+
+  useEffect(() => {
+    // When messages arrive the first time, scroll instantly to bottom once
+    if (!messages.length) return;
+    if (didInitialScrollRef.current) return;
+
+    didInitialScrollRef.current = true;
+    scrollToBottom("auto"); // no animation on initial
+  }, [messages.length]);
+
 
   function goNext() {
     if (!matchIds.length) return;
@@ -230,6 +255,20 @@ export default function ChatPanel({ chatId, onBack }) {
   function goPrev() {
     if (!matchIds.length) return;
     setMatchIndex((i) => (i - 1 + matchIds.length) % matchIds.length);
+  }
+  function scrollToBottom(behavior = "auto") {
+    // Use bottomRef (your existing ref) so it always goes to last message
+    bottomRef.current?.scrollIntoView({ behavior, block: "end" });
+  }
+
+  function handleChatScroll() {
+    const el = chatBodyRef.current;
+    if (!el) return;
+
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+
+    // show button if user is > 120px away from bottom
+    setShowToBottom(distanceFromBottom > 120);
   }
 
   const otherUid = useMemo(() => {
@@ -466,7 +505,7 @@ return (
       </div>
     )}
 
-    <div className="chatBody">
+    <div className="chatBody" ref={chatBodyRef} onScroll={handleChatScroll}>
       <div className="dayPill">Today</div>
 
       {messages.map((m) => {
@@ -495,6 +534,18 @@ return (
 
       <div ref={bottomRef} />
     </div>
+
+
+    {showToBottom && (
+      <button
+        className="toBottomBtn"
+        type="button"
+        title="Back to latest"
+        onClick={() => scrollToBottom("smooth")}
+      >
+        ↓
+      </button>
+    )}
 
     <div className="chatInputWrap">
       <div className="chatInputPill">

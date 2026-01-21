@@ -1,5 +1,5 @@
 import { Menu, Search, Plus, LogOut } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import "./Sidebar.css";
 import ChatRow from "./ChatRow";
 import NewChatModal from "./NewChatModal";
@@ -14,6 +14,17 @@ export default function Sidebar({ activeChatId, onSelectChat }) {
   const [openNew, setOpenNew] = useState(false);
   const [search, setSearch] = useState("");
 
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    function onDocClick(e) {
+      if (!menuRef.current) return;
+      if (!menuRef.current.contains(e.target)) setMenuOpen(false);
+    }
+    if (menuOpen) document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, [menuOpen]);
 
   useEffect(() => {
     if (!user) return;
@@ -40,9 +51,68 @@ export default function Sidebar({ activeChatId, onSelectChat }) {
   return (
     <div className="sidebar">
       <div className="sidebarTop">
-        <button className="iconBtn" title="Menu">
-          <Menu size={18} />
-        </button>
+        <div className="sidebarMenuWrap" ref={menuRef}>
+          <button
+            className="iconBtn"
+            title="Menu"
+            type="button"
+            onClick={() => setMenuOpen((v) => !v)}
+          >
+            {/* your existing hamburger icon here */}
+            <Menu size={18} />
+          </button>
+
+          {menuOpen && (
+            <div className="sidebarMenuDropdown">
+              <button
+                className="sidebarMenuItem"
+                type="button"
+                onClick={() => {
+                  setMenuOpen(false);
+                  onOpenSettings?.(); // opens settings modal
+                }}
+              >
+                Settings
+              </button>
+
+              <button
+                className="sidebarMenuItem"
+                type="button"
+                onClick={() => {
+                  setMenuOpen(false);
+                  alert("Profile (optional)");
+                }}
+              >
+                Profile
+              </button>
+
+              <button
+                className="sidebarMenuItem"
+                type="button"
+                onClick={() => {
+                  setMenuOpen(false);
+                  alert("New group (optional)");
+                }}
+              >
+                New group
+              </button>
+
+              <div className="sidebarMenuDivider" />
+
+              <button
+                className="sidebarMenuItem danger"
+                type="button"
+                onClick={() => {
+                  setMenuOpen(false);
+                  logout?.(); // ✅ your existing logout function
+                }}
+              >
+                Sign out
+              </button>
+            </div>
+          )}
+        </div>
+
 
         <div className="searchPill">
           <Search size={16} className="searchIcon" />
@@ -56,9 +126,7 @@ export default function Sidebar({ activeChatId, onSelectChat }) {
           <Plus size={18} />
         </button>
 
-        <button className="iconBtn" title="Logout" onClick={logout}>
-          <LogOut size={18} />
-        </button>
+   
       </div>
 
       <div className="chatList">
