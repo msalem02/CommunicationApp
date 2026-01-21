@@ -1,0 +1,31 @@
+/* src/app/AppShell.css */
+
+.page{
+  min-height: 100vh;
+  width: 100%;
+  background: #ffffff; /* full screen white like Figma */
+}
+
+.appGrid{
+  height: 100vh;        /* full height */
+  width: 100%;
+  display: flex;
+}
+
+.leftPane{
+  width: 360px;
+  border-right: 1px solid var(--border);
+  background: #fff;
+}
+
+.rightPane{
+  flex: 1;
+  background: #fff;
+  min-width: 0;
+}
+
+/* mobile */
+@media (max-width: 768px){
+  .leftPane, .rightPane{ width: 100%; }
+  .hideMobile{ display: none; }
+}

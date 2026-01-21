@@ -1,0 +1,52 @@
+.sidebar{
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebarTop{
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.iconBtn{
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: transparent;
+  border-radius: 12px;
+  cursor: pointer;
+}
+.iconBtn:hover{ background: #f3f3f3; }
+
+.searchPill{
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f1f1f1;
+  border-radius: 999px;
+  padding: 8px 12px;
+}
+
+.searchIcon{ color: #777; }
+.searchInput{
+  border: none;
+  outline: none;
+  background: transparent;
+  width: 100%;
+  font-size: 13px;
+}
+
+.chatList{
+  flex: 1;
+  overflow: auto;
+  padding-top: 4px;
+}
+.emptyHint{
+  padding: 14px;
+  font-size: 13px;
+  color: var(--muted);
+}
