@@ -1,4 +1,3 @@
-// src/firebase/chatApi.js
 import {
   addDoc,
   collection,
@@ -14,7 +13,10 @@ import {
   where,
   deleteField,
   increment,
+  getDoc,
+  writeBatch,     // ✅ ADD THIS
 } from "firebase/firestore";
+
 
 import { db } from "./firebase";
 
@@ -191,14 +193,16 @@ export function listenUser(uid, cb) {
 }
 
 
-// Update display name in Firebase Auth + Firestore user doc
+
+
+
+// Update display name in Firebase Auth + Firestore users doc
 export async function updateMyDisplayName(newName) {
   const u = auth.currentUser;
   if (!u) throw new Error("Not signed in");
 
   await updateProfile(u, { displayName: newName });
 
-  // keep Firestore user profile in sync
   await updateDoc(doc(db, "users", u.uid), {
     displayName: newName,
   });
@@ -209,4 +213,63 @@ export async function updateMyPassword(newPassword) {
   const u = auth.currentUser;
   if (!u) throw new Error("Not signed in");
   await updatePassword(u, newPassword);
+}
+
+// Save phone number to Firestore users doc (example field)
+export async function updateMyPhone(phone) {
+  const u = auth.currentUser;
+  if (!u) throw new Error("Not signed in");
+
+  await updateDoc(doc(db, "users", u.uid), {
+    phone: phone ? phone : null,
+  });
+}
+
+
+export async function getUserDoc(uid) {
+  const snap = await getDoc(doc(db, "users", uid));
+  return snap.exists() ? snap.data() : null;
+}
+
+
+export function listenUserDoc(uid, cb) {
+  return onSnapshot(doc(db, "users", uid), (snap) => {
+    cb(snap.exists() ? snap.data() : null);
+  });
+}
+
+export async function updateMyNameEverywhere(newName) {
+  const u = auth.currentUser;
+  if (!u) throw new Error("Not signed in");
+
+  const uid = u.uid;
+
+  // 1) Update Auth + users doc
+  await updateProfile(u, { displayName: newName });
+  await updateDoc(doc(db, "users", uid), { displayName: newName });
+
+  // 2) Update all chats where I'm a member:
+  // Replace my name inside memberNames[] at my index
+  const q = query(collection(db, "chats"), where("members", "array-contains", uid));
+  const snap = await getDocs(q);
+
+  const batch = writeBatch(db);
+
+  snap.forEach((docSnap) => {
+    const data = docSnap.data();
+    const members = data.members || [];
+    const names = data.memberNames || [];
+
+    const idx = members.indexOf(uid);
+    if (idx === -1) return;
+
+    const newNames = [...names];
+    newNames[idx] = newName;
+
+    batch.update(doc(db, "chats", docSnap.id), {
+      memberNames: newNames,
+    });
+  });
+
+  await batch.commit();
 }

@@ -7,13 +7,15 @@ import { useAuth } from "../../context/AuthContext";
 import { listenMyChats } from "../../firebase/chatApi";
 import { signOut } from "firebase/auth";
 import { auth } from "../../firebase/firebase";
+import SettingsModal from "./SettingsModal";
+
 
 export default function Sidebar({ activeChatId, onSelectChat }) {
   const { user } = useAuth();
   const [chats, setChats] = useState([]);
   const [openNew, setOpenNew] = useState(false);
   const [search, setSearch] = useState("");
-
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
 
@@ -69,7 +71,7 @@ export default function Sidebar({ activeChatId, onSelectChat }) {
                 type="button"
                 onClick={() => {
                   setMenuOpen(false);
-                  onOpenSettings?.(); // opens settings modal
+                  setSettingsOpen(true);
                 }}
               >
                 Settings
@@ -149,6 +151,7 @@ export default function Sidebar({ activeChatId, onSelectChat }) {
       </div>
 
       {openNew && <NewChatModal onClose={() => setOpenNew(false)} onPickChat={onSelectChat} />}
+      <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </div>
   );
 }
