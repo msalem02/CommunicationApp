@@ -1,0 +1,328 @@
+.chatPanel{
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+
+  background-image: url("../../assets/chat-wallpaper.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+.ticks{ font-size: 12px; font-weight: 700; }
+.ticksGray{ color: #9aa3af; }   /* delivered */
+.ticksRead{ color: #0004ff; }   /* read */
+
+.waTicks{
+  display: inline-flex;
+  align-items: center;
+  margin-left: 6px;
+  transform: translateY(1px);
+}
+.waGray{ color: #9aa3af; }
+.waRead{ color: #34b7f1; } /* WhatsApp blue */
+.waTicks svg{ display:block; }
+
+
+
+
+.chatPanel.empty{
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+}
+.meta{
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0;
+}
+
+.chatHeader{
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #fff;
+}
+
+.avatarSmall{
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #dfe7f5;
+  display: grid;
+  place-items: center;
+}
+
+.avatarSmallText{
+  font-weight: 800;
+  font-size: 14px;
+  color: var(--navy);
+}
+
+.headerText{ line-height: 1.1; }
+.headerName{ font-weight: 800; font-size: 13px; }
+.headerStatus{ font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+.headerActions{
+  margin-left: auto;
+  display: flex;
+  gap: 4px;
+}
+
+.iconBtn{
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: transparent;
+  border-radius: 12px;
+  cursor: pointer;
+}
+.iconBtn:hover{ background: #f3f3f3; }
+
+.backBtn{ display: none; }
+@media (max-width: 768px){
+  .backBtn{ display: inline-flex; align-items:center; justify-content:center; }
+}
+
+.chatBody{
+  flex: 1;
+  overflow: auto;
+  padding: 16px;
+
+  /* ✅ wallpaper */
+  background-image: url("../../assets/chat-wallpaper.png");
+  background-size: cover;        /* fills like Telegram */
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+
+.chatPanel.emptyWallpaper{
+  height: 100%;
+  display: grid;
+  place-items: center;
+
+  background-image: url("../../assets/chat-wallpaper.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.emptyText{
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: rgba(0,0,0,0.25);
+  color: #fff;
+  font-size: 14px;
+}
+
+
+.dayPill{
+  margin: 0 auto 14px auto;
+  width: fit-content;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(0,0,0,0.22);
+  color: rgba(255,255,255,0.95);
+  font-size: 12px;
+}
+
+.msgRow{
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 10px;
+}
+.msgRow.right{ justify-content: flex-end; }
+
+.bubble{
+  max-width: 380px;            /* Figma feels like fixed max width */
+  width: fit-content;
+  padding: 10px 12px;
+  border-radius: 14px;
+}
+
+.bubble.in{ background: #fff; border-top-left-radius: 6px; }
+.bubble.out{ background: var(--green-out); border-top-right-radius: 6px; }
+
+.bubbleText{
+  font-size: 13px;
+  color: var(--navy);
+}
+
+.meta{
+  margin-top: 6px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+  font-size: 10px;
+  color: rgba(1,22,39,0.55);
+}
+
+.chatInputWrap{
+  padding: 14px 18px;          /* space from edges like Figma */
+  background: transparent;      /* so wallpaper shows behind */
+}
+
+.chatInputPill{
+  max-width: 760px;             /* pill not full width */
+  margin: 0 auto;               /* centered */
+  height: 56px;
+
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  background: #ffffff;          /* white pill */
+  border-radius: 16px;
+  border: 1px solid rgba(0,0,0,0.06);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.10);
+  padding: 0 16px;
+}
+
+.emojiBtn{
+  width: 34px;
+  height: 34px;
+  border: none;
+  background: transparent;
+  color: #7b8794;
+  cursor: pointer;
+
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+}
+.emojiBtn:hover{
+  background: rgba(0,0,0,0.05);
+}
+
+.chatInput{
+  flex: 1;
+  height: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 16px;
+  color: #6b7280;               /* placeholder-like color */
+}
+
+.chatInput::placeholder{
+  color: #9aa3af;
+}
+
+.sendBtn{
+  width: 38px;
+  height: 38px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  color: #8aa6d6;               /* blue arrow like Figma */
+}
+
+.sendBtn:hover{
+  background: rgba(0,0,0,0.05);
+}
+
+/* Modern search overlay */
+.chatSearchWrap{
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  padding: 10px 14px;
+  background: transparent; /* keep wallpaper visible */
+}
+
+/* pill container */
+.chatSearchPill{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 18px;
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 10px 28px rgba(0,0,0,0.10);
+  border: 1px solid rgba(0,0,0,0.06);
+}
+
+/* icon inside input */
+.chatSearchIcon{
+  width: 28px;
+  height: 28px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  color: #6b7280;
+  font-size: 16px;
+}
+
+/* input */
+.chatSearchInput{
+  flex: 1;
+  height: 34px;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 14px;
+  color: #111827;
+}
+
+.chatSearchInput::placeholder{
+  color: #9ca3af;
+}
+
+/* count chip */
+.chatSearchCount{
+  font-size: 12px;
+  color: #6b7280;
+  background: rgba(0,0,0,0.05);
+  padding: 6px 10px;
+  border-radius: 999px;
+  min-width: 52px;
+  text-align: center;
+}
+
+/* buttons */
+.chatSearchBtn{
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  border: 1px solid rgba(0,0,0,0.08);
+  background: rgba(255,255,255,0.95);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: transform 0.05s ease, background 0.15s ease;
+}
+
+.chatSearchBtn:hover{
+  background: rgba(0,0,0,0.04);
+}
+
+.chatSearchBtn:active{
+  transform: scale(0.96);
+}
+
+.chatSearchBtn:disabled{
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* close slightly stronger */
+.chatSearchClose{
+  background: rgba(0,0,0,0.03);
+}
+
+
+.msgHighlight{
+  background: rgba(253, 224, 71, 0.95);
+  padding: 0 3px;
+  border-radius: 6px;
+}
+
+

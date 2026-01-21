@@ -1,0 +1,13 @@
+:root{
+  /* Figma-like */
+  --bg-app: #8BABD8;        /* outer blue */
+  --card-bg: #ffffff;
+  --blue-chat: #8BABD8;     /* chat body blue */
+  --green-out: #a7f7a7;
+  --muted: #707991;
+  --navy: #011627;
+  --border: #E6E6E6;
+  --card-radius: 18px;
+
+  --shadow: 0 12px 35px rgba(0,0,0,0.18);
+}
