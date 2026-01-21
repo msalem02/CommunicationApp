@@ -17,6 +17,7 @@ import {
   listenUser,
 } from "../../firebase/chatApi";
 import { useAuth } from "../../context/AuthContext";
+import EmojiPicker from "emoji-picker-react";
 
 
 
@@ -105,28 +106,43 @@ function HighlightedText({ text, query }) {
 
 export default function ChatPanel({ chatId, onBack }) {
   const { user } = useAuth();
-const myUid = user?.uid;
+  const myUid = user?.uid;
+/*
+  // ✅ prevents white page on reload (user can be null for a moment)
+  if (!myUid) {
+    return (
+      <div className="chatPanel emptyWallpaper">
+        <div className="emptyText">Loading...</div>
+      </div>
+    );
+  }
+*/
 
-// ✅ prevents white page on reload (user can be null for a moment)
-if (!myUid) {
-  return (
-    <div className="chatPanel emptyWallpaper">
-      <div className="emptyText">Loading...</div>
-    </div>
-  );
-}
-
+  // ---------- Core data ----------
   const [chat, setChat] = useState(null);
   const [messages, setMessages] = useState([]);
-  const [text, setText] = useState("");
   const [otherUser, setOtherUser] = useState(null);
+
+  // ---------- Composer ----------
+  const [text, setText] = useState("");
+
+  // ---------- Search ----------
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [matchIds, setMatchIds] = useState([]);
   const [matchIndex, setMatchIndex] = useState(0);
-  const msgRefs = useRef({});
+
+  // ---------- Emoji picker ----------
+  const [emojiOpen, setEmojiOpen] = useState(false);
+
+  // ---------- Refs ----------
   const bottomRef = useRef(null);
   const typingTimerRef = useRef(null);
+
+  const inputRef = useRef(null);
+  const emojiRef = useRef(null);
+  const msgRefs = useRef({});
+
 
   // Listen chat doc
   useEffect(() => {
@@ -187,6 +203,25 @@ if (!myUid) {
     if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [matchIds, matchIndex]);
 
+  useEffect(() => {
+    function onDocClick(e) {
+      if (!emojiOpen) return;
+
+      const pickerEl = emojiRef.current;
+      const btnEl = e.target.closest?.(".emojiBtn");
+
+      // if clicked inside picker or on the emoji button, ignore
+      if (pickerEl && pickerEl.contains(e.target)) return;
+      if (btnEl) return;
+
+      setEmojiOpen(false);
+    }
+
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, [emojiOpen]);
+
+
   function goNext() {
     if (!matchIds.length) return;
     setMatchIndex((i) => (i + 1) % matchIds.length);
@@ -242,6 +277,29 @@ if (!myUid) {
     if (other) bumpUnread(chatId, other).catch(() => {});
   };
 
+    const onEmojiClick = (emojiData) => {
+      const emoji = emojiData.emoji;
+
+      const el = inputRef.current;
+      if (!el) {
+        setText((t) => t + emoji);
+        return;
+      }
+
+      const start = el.selectionStart ?? text.length;
+      const end = el.selectionEnd ?? text.length;
+
+      const next = text.slice(0, start) + emoji + text.slice(end);
+      setText(next);
+
+      // move cursor after emoji
+      requestAnimationFrame(() => {
+        el.focus();
+        const pos = start + emoji.length;
+        el.setSelectionRange(pos, pos);
+      });
+    };
+
   if (!chatId) {
     return (
       <div className="chatPanel emptyWallpaper">
@@ -291,145 +349,190 @@ if (!myUid) {
     return "delivered";
   }
 
-  return (
-    <div className="chatPanel">
-      <div className="chatHeader">
-        <button className="iconBtn backBtn" onClick={onBack} title="Back">
-          <ArrowLeft size={18} />
+  function getTickStatus(m) {
+  // 1 tick until createdAt exists
+  if (!m?.createdAt) return "sent";
+
+  const msgMs = toMs(m.createdAt);
+  if (!msgMs) return "sent";
+
+  const readAt = otherUid ? chat?.lastReadAt?.[otherUid] : null;
+  const readMs = toMs(readAt);
+
+  if (readMs && msgMs <= readMs) return "read";
+  return "delivered";
+}
+
+
+return (
+  <div className="chatPanel">
+    <div className="chatHeader">
+      <button className="iconBtn backBtn" onClick={onBack} title="Back">
+        <ArrowLeft size={18} />
+      </button>
+
+      <div className="avatarSmall">
+        <span className="avatarSmallText">
+          {otherName?.[0]?.toUpperCase() || "?"}
+        </span>
+      </div>
+
+      <div className="headerText">
+        <div className="headerName">{otherName}</div>
+        <div className="headerStatus">
+          {otherTyping
+            ? "typing..."
+            : isReallyOnline(otherUser)
+            ? "online"
+            : timeAgoFrom(otherUser?.lastSeen)}
+        </div>
+      </div>
+
+      <div className="headerActions">
+        <button
+          className="iconBtn"
+          title="Search"
+          onClick={() => {
+            setSearchOpen((v) => !v);
+            setSearchQuery("");
+            setMatchIds([]);
+            setMatchIndex(0);
+          }}
+        >
+          <Search size={18} />
         </button>
 
-        <div className="avatarSmall">
-          <span className="avatarSmallText">
-            {otherName?.[0]?.toUpperCase() || "?"}
-          </span>
-        </div>
+        <button className="iconBtn" title="Call">
+          <Phone size={18} />
+        </button>
 
-        <div className="headerText">
-          <div className="headerName">{otherName}</div>
-          <div className="headerStatus">
-            {otherTyping
-              ? "typing..."
-              : isReallyOnline(otherUser)
-              ? "online"
-              : timeAgoFrom(otherUser?.lastSeen)}
+        <button className="iconBtn" title="More">
+          <MoreVertical size={18} />
+        </button>
+      </div>
+    </div>
+
+    {searchOpen && (
+      <div className="chatSearchWrap">
+        <div className="chatSearchPill">
+          <span className="chatSearchIcon">⌕</span>
+
+          <input
+            className="chatSearchInput"
+            placeholder="Search in conversation"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            autoFocus
+          />
+
+          <div className="chatSearchCount">
+            {matchIds.length ? `${matchIndex + 1}/${matchIds.length}` : "0/0"}
           </div>
-        </div>
 
-        <div className="headerActions">
           <button
-            className="iconBtn"
-            title="Search"
+            className="chatSearchBtn"
+            onClick={goPrev}
+            disabled={!matchIds.length}
+            title="Previous"
+            type="button"
+          >
+            ↑
+          </button>
+
+          <button
+            className="chatSearchBtn"
+            onClick={goNext}
+            disabled={!matchIds.length}
+            title="Next"
+            type="button"
+          >
+            ↓
+          </button>
+
+          <button
+            className="chatSearchBtn chatSearchClose"
             onClick={() => {
-              setSearchOpen((v) => !v);
+              setSearchOpen(false);
               setSearchQuery("");
               setMatchIds([]);
               setMatchIndex(0);
             }}
+            title="Close"
+            type="button"
           >
-            <Search size={18} />
-          </button>
-
-          <button className="iconBtn" title="Call">
-            <Phone size={18} />
-          </button>
-          <button className="iconBtn" title="More">
-            <MoreVertical size={18} />
+            ✕
           </button>
         </div>
       </div>
+    )}
 
-      {searchOpen && (
-        <div className="chatSearchWrap">
-          <div className="chatSearchPill">
-            <span className="chatSearchIcon">⌕</span>
+    <div className="chatBody">
+      <div className="dayPill">Today</div>
 
-            <input
-              className="chatSearchInput"
-              placeholder="Search in conversation"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              autoFocus
-            />
+      {messages.map((m) => {
+        const mine = m.senderId === user.uid;
+        const status = mine ? getTickStatus(m) : null;
 
-            <div className="chatSearchCount">
-              {matchIds.length ? `${matchIndex + 1}/${matchIds.length}` : "0/0"}
-            </div>
+        return (
+          <div
+            key={m.id}
+            ref={(el) => (msgRefs.current[m.id] = el)} // ✅ needed for arrows jump
+            className={`msgRow ${mine ? "right" : ""}`}
+          >
+            <div className={`bubble ${mine ? "out" : "in"}`}>
+              <div className="bubbleText">
+                <HighlightedText text={m.text} query={searchQuery} /> {/* ✅ highlight */}
+              </div>
 
-            <button
-              className="chatSearchBtn"
-              onClick={goPrev}
-              disabled={!matchIds.length}
-              title="Previous"
-            >
-              ↑
-            </button>
-
-            <button
-              className="chatSearchBtn"
-              onClick={goNext}
-              disabled={!matchIds.length}
-              title="Next"
-            >
-              ↓
-            </button>
-
-            <button
-              className="chatSearchBtn chatSearchClose"
-              onClick={() => setSearchOpen(false)}
-              title="Close"
-            >
-              ✕
-            </button>
-          </div>
-        </div>
-      )}
-
-
-      <div className="chatBody">
-        <div className="dayPill">Today</div>
-
-        {messages.map((m) => {
-          const mine = m.senderId === user.uid;
-
-          return (
-            <div
-              key={m.id}
-              ref={(el) => (msgRefs.current[m.id] = el)}
-              className={`msgRow ${mine ? "right" : ""}`}
-            >
-              <div className={`bubble ${mine ? "out" : "in"}`}>
-                <div className="bubbleText">
-                  <HighlightedText text={m.text} query={searchQuery} />
-                </div>
-
-                <div className="meta">
-                  {formatTime(m.createdAt)}
-                  {/* keep your ticks code here if you already have it */}
-                </div>
+              <div className="meta">
+                {formatTime(m.createdAt)}
+                {mine && <TickIcon status={status} />}
               </div>
             </div>
-          );
-        })}
+          </div>
+        );
+      })}
 
-
-        <div ref={bottomRef} />
-      </div>
-
-      <div className="chatInputWrap">
-        <div className="chatInputPill">
-          <button className="emojiBtn" title="Emoji">🙂</button>
-
-          <input
-            className="chatInput"
-            placeholder="Message"
-            value={text}
-            onChange={(e) => handleTyping(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && onSend()}
-          />
-
-          <button className="sendBtn" onClick={onSend} title="Send">➤</button>
-        </div>
-      </div>
+      <div ref={bottomRef} />
     </div>
-  );
+
+    <div className="chatInputWrap">
+      <div className="chatInputPill">
+        <button
+          className="emojiBtn"
+          title="Emoji"
+          onClick={() => setEmojiOpen((v) => !v)}
+          type="button"
+        >
+          🙂
+        </button>
+
+        <input
+          ref={inputRef}
+          className="chatInput"
+          placeholder="Message"
+          value={text}
+          onChange={(e) => handleTyping(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && onSend()}
+        />
+
+        <button className="sendBtn" onClick={onSend} title="Send" type="button">
+          ➤
+        </button>
+      </div>
+
+      {emojiOpen && (
+        <div className="emojiPop" ref={emojiRef}>
+          <EmojiPicker
+            onEmojiClick={(emojiData) => onEmojiClick(emojiData)}
+            height={360}
+            width={320}
+            lazyLoadEmojis
+          />
+        </div>
+      )}
+    </div>
+  </div>
+);
+
 }
