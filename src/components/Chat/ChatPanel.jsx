@@ -1,10 +1,5 @@
 // src/components/Chat/ChatPanel.jsx
-import {
-  MoreVertical,
-  Phone,
-  Search,
-  ArrowLeft,
-} from "lucide-react";
+import { MoreVertical, Phone, Search, ArrowLeft } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import "./ChatPanel.css";
 import {
@@ -15,11 +10,13 @@ import {
   bumpUnread,
   markRead,
   listenUser,
+  editMessage,
+  deleteMessageForMe,
+  deleteMessageForEveryone,
+  updateChatPreview,
 } from "../../firebase/chatApi";
 import { useAuth } from "../../context/AuthContext";
 import EmojiPicker from "emoji-picker-react";
-
-
 
 function formatTime(ts) {
   if (!ts) return "";
@@ -31,13 +28,12 @@ function TickIcon({ status }) {
   const cls = status === "read" ? "waTicks waRead" : "waTicks waGray";
   const two = status === "delivered" || status === "read";
 
-  // ✅ one tick shape (used twice)
   const TickPath = ({ dx = 0 }) => (
     <path
       d={`M${1.2 + dx} 6.3 L${4.4 + dx} 9.6 L${10.8 + dx} 2.2`}
       fill="none"
       stroke="currentColor"
-      strokeWidth="2.3"            // ✅ bolder (increase/decrease)
+      strokeWidth="2.3"
       strokeLinecap="round"
       strokeLinejoin="round"
     />
@@ -47,9 +43,7 @@ function TickIcon({ status }) {
     <span className={cls} aria-label={status} title={status}>
       {two ? (
         <svg viewBox="0 0 22 12" width="20" height="12">
-          {/* first tick */}
           <TickPath dx={0} />
-          {/* second tick: same exact path, shifted */}
           <TickPath dx={6} />
         </svg>
       ) : (
@@ -58,7 +52,7 @@ function TickIcon({ status }) {
             d="M1.2 6.3 L4.4 9.6 L10.8 2.2"
             fill="none"
             stroke="currentColor"
-            strokeWidth="2.3"        // ✅ bolder
+            strokeWidth="2.3"
             strokeLinecap="round"
             strokeLinejoin="round"
           />
@@ -68,9 +62,7 @@ function TickIcon({ status }) {
   );
 }
 
-
-
-// ✅ Safe timestamp to ms (prevents crashes / white page)
+// Safe timestamp to ms
 function toMs(ts) {
   if (!ts) return 0;
   try {
@@ -82,46 +74,12 @@ function toMs(ts) {
   }
 }
 
-function isSameDay(aMs, bMs) {
-  if (!aMs || !bMs) return false;
-  const a = new Date(aMs);
-  const b = new Date(bMs);
-  return (
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
-  );
-}
-
-function formatDayLabel(ms) {
-  if (!ms) return "";
-  const d = new Date(ms);
-
-  const now = new Date();
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const startOfThatDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-
-  const diffDays = Math.round((startOfToday - startOfThatDay) / (1000 * 60 * 60 * 24));
-
-  if (diffDays === 0) return "Today";
-  if (diffDays === 1) return "Yesterday";
-
-  return d.toLocaleDateString([], {
-    weekday: "short",
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
-
-
 function escapeRegExp(str) {
   return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function HighlightedText({ text, query }) {
   if (!query) return text;
-
   const q = query.trim();
   if (!q) return text;
 
@@ -130,48 +88,68 @@ function HighlightedText({ text, query }) {
 
   return parts.map((p, i) =>
     re.test(p) ? (
-      <mark key={i} className="msgHighlight">{p}</mark>
+      <mark key={i} className="msgHighlight">
+        {p}
+      </mark>
     ) : (
       <span key={i}>{p}</span>
     )
   );
 }
 
+function timeAgoFrom(ts) {
+  if (!ts) return "last seen recently";
+  const d = ts?.toDate ? ts.toDate() : new Date(ts);
+  const diff = Date.now() - d.getTime();
+
+  const sec = Math.floor(diff / 1000);
+  if (sec < 60) return "last seen just now";
+
+  const min = Math.floor(sec / 60);
+  if (min < 60) return `last seen ${min} min ago`;
+
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `last seen ${hr}h ago`;
+
+  const day = Math.floor(hr / 24);
+  return `last seen ${day}d ago`;
+}
+
+function isReallyOnline(other) {
+  if (!other?.isOnline || !other?.lastSeen) return false;
+  const d = other.lastSeen?.toDate ? other.lastSeen.toDate() : new Date(other.lastSeen);
+  return Date.now() - d.getTime() < 60000;
+}
+
 export default function ChatPanel({ chatId, onBack }) {
   const { user } = useAuth();
   const myUid = user?.uid;
-/*
-  // ✅ prevents white page on reload (user can be null for a moment)
-  if (!myUid) {
-    return (
-      <div className="chatPanel emptyWallpaper">
-        <div className="emptyText">Loading...</div>
-      </div>
-    );
-  }
-*/
 
-  // ---------- Core data ----------
+  // Core data
   const [chat, setChat] = useState(null);
   const [messages, setMessages] = useState([]);
   const [otherUser, setOtherUser] = useState(null);
 
-  // ---------- Composer ----------
+  // Composer
   const [text, setText] = useState("");
 
-  // ---------- Search ----------
+  // Search
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [matchIds, setMatchIds] = useState([]);
   const [matchIndex, setMatchIndex] = useState(0);
 
-  // ---------- Emoji picker ----------
+  // Emoji picker
   const [emojiOpen, setEmojiOpen] = useState(false);
 
-  // ---------- Refs ----------
+  // Message menu + edit
+  const [menuFor, setMenuFor] = useState(null); // messageId
+  const [editingId, setEditingId] = useState(null);
+  const [editDraft, setEditDraft] = useState("");
+
+  // Refs
   const bottomRef = useRef(null);
   const typingTimerRef = useRef(null);
-
   const inputRef = useRef(null);
   const emojiRef = useRef(null);
   const msgRefs = useRef({});
@@ -179,6 +157,20 @@ export default function ChatPanel({ chatId, onBack }) {
   const chatBodyRef = useRef(null);
   const didInitialScrollRef = useRef(false);
 
+  // Close message menu on outside click
+  useEffect(() => {
+    const onDoc = (e) => {
+      // If clicking inside menu OR on the menu button, don't close
+      const inMenu = e.target.closest?.(".msgMenu");
+      const inBtn = e.target.closest?.(".msgMenuBtn");
+      if (inMenu || inBtn) return;
+
+      setMenuFor(null);
+    };
+
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, []);
 
   // Listen chat doc
   useEffect(() => {
@@ -194,115 +186,14 @@ export default function ChatPanel({ chatId, onBack }) {
     return () => unsub?.();
   }, [chatId]);
 
-  // Subscribe to other user's profile (presence)
+  // Subscribe to other user's profile
   useEffect(() => {
     if (!chat || !user) return;
-
     const other = chat.members?.find((id) => id !== user.uid);
     if (!other) return;
-
     const unsub = listenUser(other, setOtherUser);
     return () => unsub?.();
   }, [chat?.id, chat?.members, user?.uid]);
-
-  // Auto-scroll
-  useEffect(() => {
-    // only auto-scroll if user is already near bottom
-    const el = chatBodyRef.current;
-    if (!el) return;
-
-    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
-    const nearBottom = distanceFromBottom < 120;
-
-    if (nearBottom) scrollToBottom("smooth");
-  }, [messages.length]);
-
-
-  // Keep unread at 0 while inside chat
-  useEffect(() => {
-    if (!chatId || !user) return;
-    markRead(chatId, myUid).catch(() => {});
-  }, [chatId, user?.uid, messages.length]);
-
-  useEffect(() => {
-    const q = searchQuery.trim().toLowerCase();
-    if (!q) {
-      setMatchIds([]);
-      setMatchIndex(0);
-      return;
-    }
-
-    const ids = messages
-      .filter((m) => (m?.text || "").toLowerCase().includes(q))
-      .map((m) => m.id);
-
-    setMatchIds(ids);
-    setMatchIndex(ids.length ? 0 : 0);
-  }, [searchQuery, messages]);
-
-  useEffect(() => {
-    if (!matchIds.length) return;
-    const id = matchIds[matchIndex];
-    const el = msgRefs.current[id];
-    if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
-  }, [matchIds, matchIndex]);
-
-  useEffect(() => {
-    function onDocClick(e) {
-      if (!emojiOpen) return;
-
-      const pickerEl = emojiRef.current;
-      const btnEl = e.target.closest?.(".emojiBtn");
-
-      // if clicked inside picker or on the emoji button, ignore
-      if (pickerEl && pickerEl.contains(e.target)) return;
-      if (btnEl) return;
-
-      setEmojiOpen(false);
-    }
-
-    document.addEventListener("mousedown", onDocClick);
-    return () => document.removeEventListener("mousedown", onDocClick);
-  }, [emojiOpen]);
-
-  useEffect(() => {
-    if (!chatId) return;
-    didInitialScrollRef.current = false;
-  }, [chatId]);
-
-  useEffect(() => {
-    // When messages arrive the first time, scroll instantly to bottom once
-    if (!messages.length) return;
-    if (didInitialScrollRef.current) return;
-
-    didInitialScrollRef.current = true;
-    scrollToBottom("auto"); // no animation on initial
-  }, [messages.length]);
-
-
-  function goNext() {
-    if (!matchIds.length) return;
-    setMatchIndex((i) => (i + 1) % matchIds.length);
-  }
-
-  function goPrev() {
-    if (!matchIds.length) return;
-    setMatchIndex((i) => (i - 1 + matchIds.length) % matchIds.length);
-  }
-  function scrollToBottom(behavior = "auto") {
-    // Use bottomRef (your existing ref) so it always goes to last message
-    bottomRef.current?.scrollIntoView({ behavior, block: "end" });
-  }
-
-  function handleChatScroll() {
-    const el = chatBodyRef.current;
-    if (!el) return;
-
-    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
-
-    // show button if user is > 120px away from bottom
-    setShowToBottom(distanceFromBottom > 120);
-  }
 
   const otherUid = useMemo(() => {
     if (!chat || !user) return null;
@@ -320,9 +211,108 @@ export default function ChatPanel({ chatId, onBack }) {
     const ouid = chat.members?.find((id) => id !== user.uid);
     const ts = ouid ? chat.typing?.[ouid] : null;
     if (!ts) return false;
-
     return Date.now() - toMs(ts) < 2500;
   }, [chat, user]);
+
+  // Filter messages that are deleted for me
+  const visibleMessages = useMemo(() => {
+    if (!myUid) return messages;
+    return messages.filter((m) => !m?.deletedFor?.[myUid]);
+  }, [messages, myUid]);
+
+  // Auto scroll (only if near bottom)
+  useEffect(() => {
+    const el = chatBodyRef.current;
+    if (!el) return;
+
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    const nearBottom = distanceFromBottom < 120;
+
+    if (nearBottom) scrollToBottom("smooth");
+  }, [visibleMessages.length]);
+
+  // Keep unread 0 while inside chat
+  useEffect(() => {
+    if (!chatId || !user || !myUid) return;
+    markRead(chatId, myUid).catch(() => {});
+  }, [chatId, user?.uid, myUid, visibleMessages.length]);
+
+  // Search matches
+  useEffect(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) {
+      setMatchIds([]);
+      setMatchIndex(0);
+      return;
+    }
+
+    const ids = visibleMessages
+      .filter((m) => (m?.text || "").toLowerCase().includes(q))
+      .map((m) => m.id);
+
+    setMatchIds(ids);
+    setMatchIndex(ids.length ? 0 : 0);
+  }, [searchQuery, visibleMessages]);
+
+  useEffect(() => {
+    if (!matchIds.length) return;
+    const id = matchIds[matchIndex];
+    const el = msgRefs.current[id];
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [matchIds, matchIndex]);
+
+  // Emoji click outside close
+  useEffect(() => {
+    function onDocClick(e) {
+      if (!emojiOpen) return;
+
+      const pickerEl = emojiRef.current;
+      const btnEl = e.target.closest?.(".emojiBtn");
+
+      if (pickerEl && pickerEl.contains(e.target)) return;
+      if (btnEl) return;
+
+      setEmojiOpen(false);
+    }
+
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, [emojiOpen]);
+
+  // Reset initial scroll per chat
+  useEffect(() => {
+    if (!chatId) return;
+    didInitialScrollRef.current = false;
+  }, [chatId]);
+
+  useEffect(() => {
+    if (!visibleMessages.length) return;
+    if (didInitialScrollRef.current) return;
+
+    didInitialScrollRef.current = true;
+    scrollToBottom("auto");
+  }, [visibleMessages.length]);
+
+  function goNext() {
+    if (!matchIds.length) return;
+    setMatchIndex((i) => (i + 1) % matchIds.length);
+  }
+
+  function goPrev() {
+    if (!matchIds.length) return;
+    setMatchIndex((i) => (i - 1 + matchIds.length) % matchIds.length);
+  }
+
+  function scrollToBottom(behavior = "auto") {
+    bottomRef.current?.scrollIntoView({ behavior, block: "end" });
+  }
+
+  function handleChatScroll() {
+    const el = chatBodyRef.current;
+    if (!el) return;
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    setShowToBottom(distanceFromBottom > 120);
+  }
 
   const handleTyping = (val) => {
     setText(val);
@@ -349,28 +339,90 @@ export default function ChatPanel({ chatId, onBack }) {
     if (other) bumpUnread(chatId, other).catch(() => {});
   };
 
-    const onEmojiClick = (emojiData) => {
-      const emoji = emojiData.emoji;
+  const onEmojiClick = (emojiData) => {
+    const emoji = emojiData.emoji;
 
-      const el = inputRef.current;
-      if (!el) {
-        setText((t) => t + emoji);
-        return;
+    const el = inputRef.current;
+    if (!el) {
+      setText((t) => t + emoji);
+      return;
+    }
+
+    const start = el.selectionStart ?? text.length;
+    const end = el.selectionEnd ?? text.length;
+
+    const next = text.slice(0, start) + emoji + text.slice(end);
+    setText(next);
+
+    requestAnimationFrame(() => {
+      el.focus();
+      const pos = start + emoji.length;
+      el.setSelectionRange(pos, pos);
+    });
+  };
+
+  // Tick status (read receipts) using lastReadAt
+  function getTickStatus(m) {
+    if (!m?.createdAt) return "sent";
+
+    const msgMs = toMs(m.createdAt);
+    if (!msgMs) return "sent";
+
+    const readAt = otherUid ? chat?.lastReadAt?.[otherUid] : null;
+    const readMs = toMs(readAt);
+
+    if (readMs && msgMs <= readMs) return "read";
+    return "delivered";
+  }
+
+  // Handlers: edit + delete
+  async function doDeleteForMe(m) {
+    try {
+      await deleteMessageForMe(chatId, m.id, myUid);
+      setMenuFor(null);
+    } catch (e) {
+      console.error("Delete for me failed:", e);
+      alert(e?.message || String(e));
+    }
+  }
+
+  async function doDeleteForEveryone(m) {
+    try {
+      await deleteMessageForEveryone(chatId, m.id);
+
+      const isLast = visibleMessages[visibleMessages.length - 1]?.id === m.id;
+      if (isLast) {
+        await updateChatPreview(chatId, "Message deleted", user.uid);
       }
 
-      const start = el.selectionStart ?? text.length;
-      const end = el.selectionEnd ?? text.length;
+      setMenuFor(null);
+    } catch (e) {
+      console.error("Delete for everyone failed:", e);
+      alert(e?.message || String(e));
+    }
+  }
 
-      const next = text.slice(0, start) + emoji + text.slice(end);
-      setText(next);
+  async function doEditSave(m) {
+    try {
+      const t = editDraft.trim();
+      if (!t) return;
 
-      // move cursor after emoji
-      requestAnimationFrame(() => {
-        el.focus();
-        const pos = start + emoji.length;
-        el.setSelectionRange(pos, pos);
-      });
-    };
+      await editMessage(chatId, m.id, t);
+
+      const isLast = visibleMessages[visibleMessages.length - 1]?.id === m.id;
+      if (isLast) {
+        await updateChatPreview(chatId, t, user.uid);
+      }
+
+      setEditingId(null);
+      setEditDraft("");
+      setMenuFor(null);
+    } catch (e) {
+      console.error("Edit failed:", e);
+      alert(e?.message || String(e));
+    }
+  }
+
 
   if (!chatId) {
     return (
@@ -380,253 +432,267 @@ export default function ChatPanel({ chatId, onBack }) {
     );
   }
 
-  function timeAgoFrom(ts) {
-    if (!ts) return "last seen recently";
-    const d = ts?.toDate ? ts.toDate() : new Date(ts);
-    const diff = Date.now() - d.getTime();
+  return (
+    <div className="chatPanel">
+      <div className="chatHeader">
+        <button className="iconBtn backBtn" onClick={onBack} title="Back">
+          <ArrowLeft size={18} />
+        </button>
 
-    const sec = Math.floor(diff / 1000);
-    if (sec < 60) return "last seen just now";
-
-    const min = Math.floor(sec / 60);
-    if (min < 60) return `last seen ${min} min ago`;
-
-    const hr = Math.floor(min / 60);
-    if (hr < 24) return `last seen ${hr}h ago`;
-
-    const day = Math.floor(hr / 24);
-    return `last seen ${day}d ago`;
-  }
-
-  function isReallyOnline(other) {
-    if (!other?.isOnline || !other?.lastSeen) return false;
-    const d = other.lastSeen?.toDate ? other.lastSeen.toDate() : new Date(other.lastSeen);
-    return Date.now() - d.getTime() < 60000;
-  }
-
-  // ✅ Tick status using lastReadAt (NO message updates)
-  function getTickStatus(message) {
-    // 1 tick until createdAt resolves
-    if (!message?.createdAt) return "sent";
-
-    // 2 gray ticks once createdAt exists
-    const msgMs = toMs(message.createdAt);
-    if (!msgMs) return "sent";
-
-    // read if other user's lastReadAt is after this message
-    const readAt = otherUid ? chat?.lastReadAt?.[otherUid] : null;
-    const readMs = toMs(readAt);
-
-    if (readMs && msgMs <= readMs) return "read";
-    return "delivered";
-  }
-
-  function getTickStatus(m) {
-  // 1 tick until createdAt exists
-  if (!m?.createdAt) return "sent";
-
-  const msgMs = toMs(m.createdAt);
-  if (!msgMs) return "sent";
-
-  const readAt = otherUid ? chat?.lastReadAt?.[otherUid] : null;
-  const readMs = toMs(readAt);
-
-  if (readMs && msgMs <= readMs) return "read";
-  return "delivered";
-}
-
-
-return (
-  <div className="chatPanel">
-    <div className="chatHeader">
-      <button className="iconBtn backBtn" onClick={onBack} title="Back">
-        <ArrowLeft size={18} />
-      </button>
-
-      <div className="avatarSmall">
-        <span className="avatarSmallText">
-          {otherName?.[0]?.toUpperCase() || "?"}
-        </span>
-      </div>
-
-      <div className="headerText">
-        <div className="headerName">{otherName}</div>
-        <div className="headerStatus">
-          {otherTyping
-            ? "typing..."
-            : isReallyOnline(otherUser)
-            ? "online"
-            : timeAgoFrom(otherUser?.lastSeen)}
+        <div className="avatarSmall">
+          <span className="avatarSmallText">{otherName?.[0]?.toUpperCase() || "?"}</span>
         </div>
-      </div>
 
-      <div className="headerActions">
-        <button
-          className="iconBtn"
-          title="Search"
-          onClick={() => {
-            setSearchOpen((v) => !v);
-            setSearchQuery("");
-            setMatchIds([]);
-            setMatchIndex(0);
-          }}
-        >
-          <Search size={18} />
-        </button>
-
-        <button className="iconBtn" title="Call">
-          <Phone size={18} />
-        </button>
-
-        <button className="iconBtn" title="More">
-          <MoreVertical size={18} />
-        </button>
-      </div>
-    </div>
-
-    {searchOpen && (
-      <div className="chatSearchWrap">
-        <div className="chatSearchPill">
-          <span className="chatSearchIcon">⌕</span>
-
-          <input
-            className="chatSearchInput"
-            placeholder="Search in conversation"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            autoFocus
-          />
-
-          <div className="chatSearchCount">
-            {matchIds.length ? `${matchIndex + 1}/${matchIds.length}` : "0/0"}
+        <div className="headerText">
+          <div className="headerName">{otherName}</div>
+          <div className="headerStatus">
+            {otherTyping
+              ? "typing..."
+              : isReallyOnline(otherUser)
+              ? "online"
+              : timeAgoFrom(otherUser?.lastSeen)}
           </div>
+        </div>
 
+        <div className="headerActions">
           <button
-            className="chatSearchBtn"
-            onClick={goPrev}
-            disabled={!matchIds.length}
-            title="Previous"
-            type="button"
-          >
-            ↑
-          </button>
-
-          <button
-            className="chatSearchBtn"
-            onClick={goNext}
-            disabled={!matchIds.length}
-            title="Next"
-            type="button"
-          >
-            ↓
-          </button>
-
-          <button
-            className="chatSearchBtn chatSearchClose"
+            className="iconBtn"
+            title="Search"
             onClick={() => {
-              setSearchOpen(false);
+              setSearchOpen((v) => !v);
               setSearchQuery("");
               setMatchIds([]);
               setMatchIndex(0);
             }}
-            title="Close"
-            type="button"
           >
-            ✕
+            <Search size={18} />
+          </button>
+
+          <button className="iconBtn" title="Call">
+            <Phone size={18} />
+          </button>
+
+          <button className="iconBtn" title="More">
+            <MoreVertical size={18} />
           </button>
         </div>
       </div>
-    )}
 
-    <div className="chatBody" ref={chatBodyRef} onScroll={handleChatScroll}>
-      {messages.map((m, i) => {
-        const mine = m.senderId === user.uid;
-        const status = mine ? getTickStatus(m) : null;
+      {searchOpen && (
+        <div className="chatSearchWrap">
+          <div className="chatSearchPill">
+            <span className="chatSearchIcon">⌕</span>
 
-        const curMs = toMs(m.createdAt);
-        const prevMs = i > 0 ? toMs(messages[i - 1]?.createdAt) : 0;
+            <input
+              className="chatSearchInput"
+              placeholder="Search in conversation"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              autoFocus
+            />
 
-        const showDatePill =
-          i === 0 ||
-          !isSameDay(curMs, prevMs); // show pill when day changes
+            <div className="chatSearchCount">
+              {matchIds.length ? `${matchIndex + 1}/${matchIds.length}` : "0/0"}
+            </div>
 
-        return (
-          <div key={m.id}>
-            {showDatePill && (
-              <div className="dayPill">{formatDayLabel(curMs)}</div>
-            )}
+            <button
+              className="chatSearchBtn"
+              onClick={goPrev}
+              disabled={!matchIds.length}
+              title="Previous"
+              type="button"
+            >
+              ↑
+            </button>
 
+            <button
+              className="chatSearchBtn"
+              onClick={goNext}
+              disabled={!matchIds.length}
+              title="Next"
+              type="button"
+            >
+              ↓
+            </button>
+
+            <button
+              className="chatSearchBtn chatSearchClose"
+              onClick={() => {
+                setSearchOpen(false);
+                setSearchQuery("");
+                setMatchIds([]);
+                setMatchIndex(0);
+              }}
+              title="Close"
+              type="button"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="chatBody" ref={chatBodyRef} onScroll={handleChatScroll}>
+        {visibleMessages.map((m) => {
+          const mine = m.senderId === user.uid;
+          const status = mine ? getTickStatus(m) : null;
+
+          const isEditing = editingId === m.id;
+          const isDeleted = !!m.isDeleted;
+
+          return (
             <div
+              key={m.id}
               ref={(el) => (msgRefs.current[m.id] = el)}
               className={`msgRow ${mine ? "right" : ""}`}
             >
               <div className={`bubble ${mine ? "out" : "in"}`}>
-                <div className="bubbleText">
-                  <HighlightedText text={m.text} query={searchQuery} />
-                </div>
+                {/* Menu button */}
+                <button
+                  className="msgMenuBtn"
+                  type="button"
+                  title="Message options"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setMenuFor((cur) => (cur === m.id ? null : m.id));
+                  }}
+                >
+                  ⋮
+                </button>
 
+                {/* Dropdown */}
+                {menuFor === m.id && (
+                  <div className="msgMenu" onClick={(e) => e.stopPropagation()}>
+                    {mine && !isDeleted && (
+                      <button
+                        className="msgMenuItem"
+                        type="button"
+                        onClick={() => {
+                          setMenuFor(null);
+                          setEditingId(m.id);
+                          setEditDraft(m.text || "");
+                        }}
+                      >
+                        Edit
+                      </button>
+                    )}
+
+                    <button
+                      className="msgMenuItem"
+                      type="button"
+                      onClick={() => doDeleteForMe(m)}
+                    >
+                      Delete for me
+                    </button>
+
+                    {mine && (
+                      <button
+                        className="msgMenuItem danger"
+                        type="button"
+                        onClick={() => doDeleteForEveryone(m)}
+                      >
+                        Delete for everyone
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* Content */}
+                {isDeleted ? (
+                  <div className="bubbleDeleted">This message was deleted</div>
+                ) : isEditing ? (
+                  <div className="editWrap">
+                    <input
+                      className="editInput"
+                      value={editDraft}
+                      onChange={(e) => setEditDraft(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") doEditSave(m);
+                        if (e.key === "Escape") {
+                          setEditingId(null);
+                          setEditDraft("");
+                        }
+                      }}
+                      autoFocus
+                    />
+                    <div className="editActions">
+                      <button
+                        className="editBtn ghost"
+                        type="button"
+                        onClick={() => {
+                          setEditingId(null);
+                          setEditDraft("");
+                        }}
+                      >
+                        Cancel
+                      </button>
+                      <button className="editBtn" type="button" onClick={() => doEditSave(m)}>
+                        Save
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bubbleText">
+                    <HighlightedText text={m.text} query={searchQuery} />
+                  </div>
+                )}
+
+                {/* Meta */}
                 <div className="meta">
                   {formatTime(m.createdAt)}
+                  {!!m.editedAt && !isDeleted && <span className="editedTag">edited</span>}
                   {mine && <TickIcon status={status} />}
                 </div>
               </div>
             </div>
-          </div>
-        );
-      })}
+          );
+        })}
 
-      <div ref={bottomRef} />
-    </div>
-
-
-    {showToBottom && (
-      <button
-        className="toBottomBtn"
-        type="button"
-        title="Back to latest"
-        onClick={() => scrollToBottom("smooth")}
-      >
-        ↓
-      </button>
-    )}
-
-    <div className="chatInputWrap">
-      <div className="chatInputPill">
-        <button
-          className="emojiBtn"
-          title="Emoji"
-          onClick={() => setEmojiOpen((v) => !v)}
-          type="button"
-        >
-          🙂
-        </button>
-
-        <input
-          ref={inputRef}
-          className="chatInput"
-          placeholder="Message"
-          value={text}
-          onChange={(e) => handleTyping(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && onSend()}
-        />
-
-        <button className="sendBtn" onClick={onSend} title="Send" type="button">
-          ➤
-        </button>
+        <div ref={bottomRef} />
       </div>
 
-      {emojiOpen && (
-        <div className="emojiPop" ref={emojiRef}>
-          <EmojiPicker
-            onEmojiClick={(emojiData) => onEmojiClick(emojiData)}
-            height={360}
-            width={320}
-            lazyLoadEmojis
-          />
-        </div>
+      {showToBottom && (
+        <button
+          className="toBottomBtn"
+          type="button"
+          title="Back to latest"
+          onClick={() => scrollToBottom("smooth")}
+        >
+          ↓
+        </button>
       )}
-    </div>
-  </div>
-);
 
+      <div className="chatInputWrap">
+        <div className="chatInputPill">
+          <button
+            className="emojiBtn"
+            title="Emoji"
+            onClick={() => setEmojiOpen((v) => !v)}
+            type="button"
+          >
+            🙂
+          </button>
+
+          <input
+            ref={inputRef}
+            className="chatInput"
+            placeholder="Message"
+            value={text}
+            onChange={(e) => handleTyping(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && onSend()}
+          />
+
+          <button className="sendBtn" onClick={onSend} title="Send" type="button">
+            ➤
+          </button>
+        </div>
+
+        {emojiOpen && (
+          <div className="emojiPop" ref={emojiRef}>
+            <EmojiPicker onEmojiClick={onEmojiClick} height={360} width={320} lazyLoadEmojis />
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }

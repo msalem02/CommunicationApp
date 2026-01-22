@@ -273,3 +273,59 @@ export async function updateMyNameEverywhere(newName) {
 
   await batch.commit();
 }
+
+
+// -------------------------
+// Message edit / delete
+// -------------------------
+
+export async function editMessage(chatId, messageId, newText) {
+  const u = auth.currentUser;
+  if (!u) throw new Error("Not signed in");
+
+  const t = String(newText || "").trim();
+  if (!t) throw new Error("Message cannot be empty.");
+
+  const ref = doc(db, "chats", chatId, "messages", messageId);
+
+  await updateDoc(ref, {
+    text: t,
+    editedAt: serverTimestamp(),
+  });
+}
+
+// Delete for ME only (hide message for this user)
+export async function deleteMessageForMe(chatId, messageId, uid) {
+  const u = auth.currentUser;
+  if (!u) throw new Error("Not signed in");
+
+  const targetUid = uid || u.uid;
+  const ref = doc(db, "chats", chatId, "messages", messageId);
+
+  await updateDoc(ref, {
+    [`deletedFor.${targetUid}`]: true,
+  });
+}
+
+// Delete for EVERYONE (soft delete)
+export async function deleteMessageForEveryone(chatId, messageId) {
+  const u = auth.currentUser;
+  if (!u) throw new Error("Not signed in");
+
+  const ref = doc(db, "chats", chatId, "messages", messageId);
+
+  await updateDoc(ref, {
+    isDeleted: true,
+    deletedAt: serverTimestamp(),
+    text: "",
+  });
+}
+
+// Update sidebar preview (lastMessage) safely from UI actions
+export async function updateChatPreview(chatId, previewText, senderId) {
+  await updateDoc(doc(db, "chats", chatId), {
+    lastMessage: previewText,
+    lastMessageSenderId: senderId,
+    updatedAt: serverTimestamp(),
+  });
+}
