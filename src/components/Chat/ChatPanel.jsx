@@ -121,6 +121,37 @@ function isReallyOnline(other) {
   const d = other.lastSeen?.toDate ? other.lastSeen.toDate() : new Date(other.lastSeen);
   return Date.now() - d.getTime() < 60000;
 }
+function isSameDay(aMs, bMs) {
+  if (!aMs || !bMs) return false;
+  const a = new Date(aMs);
+  const b = new Date(bMs);
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+}
+
+function formatDayLabel(ms) {
+  if (!ms) return "";
+  const d = new Date(ms);
+
+  const now = new Date();
+  const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startThat = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+
+  const diffDays = Math.round((startToday - startThat) / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return "Yesterday";
+
+  return d.toLocaleDateString([], {
+    weekday: "short",
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
 
 export default function ChatPanel({ chatId, onBack }) {
   const { user } = useAuth();
@@ -589,122 +620,129 @@ export default function ChatPanel({ chatId, onBack }) {
           </div>
         </div>
       )}
-
+      
       <div className="chatBody" ref={chatBodyRef} onScroll={handleChatScroll}>
-        {visibleMessages.map((m) => {
+        {visibleMessages.map((m, i) => {
           const mine = m.senderId === user.uid;
           const status = mine ? getTickStatus(m) : null;
 
           const isEditing = editingId === m.id;
           const isDeleted = !!m.isDeleted;
 
+          const curMs = toMs(m.createdAt);
+          const prevMs = i > 0 ? toMs(visibleMessages[i - 1]?.createdAt) : 0;
+
+          const showDayPill = i === 0 || !isSameDay(curMs, prevMs);
+
           return (
-            <div
-              key={m.id}
-              ref={(el) => (msgRefs.current[m.id] = el)}
-              className={`msgRow ${mine ? "right" : ""}`}
-            >
-              <div className={`bubble ${mine ? "out" : "in"}`}>
-                {/* Menu button */}
-                <button
-                  className="msgMenuBtn"
-                  type="button"
-                  title="Message options"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setMenuFor((cur) => (cur === m.id ? null : m.id));
-                  }}
-                >
-                  ⋮
-                </button>
+            <div key={m.id}>
+              {showDayPill && curMs ? (
+                <div className="dayPill">{formatDayLabel(curMs)}</div>
+              ) : null}
 
-                {/* Dropdown */}
-                {menuFor === m.id && (
-                  <div className="msgMenu" onClick={(e) => e.stopPropagation()}>
-                    {mine && !isDeleted && (
-                      <button
-                        className="msgMenuItem"
-                        type="button"
-                        onClick={() => {
-                          setMenuFor(null);
-                          setEditingId(m.id);
-                          setEditDraft(m.text || "");
-                        }}
-                      >
-                        Edit
-                      </button>
-                    )}
+              <div
+                ref={(el) => (msgRefs.current[m.id] = el)}
+                className={`msgRow ${mine ? "right" : ""}`}
+              >
+                <div className={`bubble ${mine ? "out" : "in"}`}>
+                  {/* Menu button */}
+                  <button
+                    className="msgMenuBtn"
+                    type="button"
+                    title="Message options"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setMenuFor((cur) => (cur === m.id ? null : m.id));
+                    }}
+                  >
+                    ⋮
+                  </button>
 
-                    <button
-                      className="msgMenuItem"
-                      type="button"
-                      onClick={() => doDeleteForMe(m)}
-                    >
-                      Delete for me
-                    </button>
+                  {/* Dropdown */}
+                  {menuFor === m.id && (
+                    <div className="msgMenu" onClick={(e) => e.stopPropagation()}>
+                      {mine && !isDeleted && (
+                        <button
+                          className="msgMenuItem"
+                          type="button"
+                          onClick={() => {
+                            setMenuFor(null);
+                            setEditingId(m.id);
+                            setEditDraft(m.text || "");
+                          }}
+                        >
+                          Edit
+                        </button>
+                      )}
 
-                    {mine && (
-                      <button
-                        className="msgMenuItem danger"
-                        type="button"
-                        onClick={() => doDeleteForEveryone(m)}
-                      >
-                        Delete for everyone
+                      <button className="msgMenuItem" type="button" onClick={() => doDeleteForMe(m)}>
+                        Delete for me
                       </button>
-                    )}
-                  </div>
-                )}
 
-                {/* Content */}
-                {isDeleted ? (
-                  <div className="bubbleDeleted">This message was deleted</div>
-                ) : isEditing ? (
-                  <div className="editWrap">
-                    <input
-                      className="editInput"
-                      value={editDraft}
-                      onChange={(e) => setEditDraft(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") doEditSave(m);
-                        if (e.key === "Escape") {
-                          setEditingId(null);
-                          setEditDraft("");
-                        }
-                      }}
-                      autoFocus
-                    />
-                    <div className="editActions">
-                      <button
-                        className="editBtn ghost"
-                        type="button"
-                        onClick={() => {
-                          setEditingId(null);
-                          setEditDraft("");
-                        }}
-                      >
-                        Cancel
-                      </button>
-                      <button className="editBtn" type="button" onClick={() => doEditSave(m)}>
-                        Save
-                      </button>
+                      {mine && (
+                        <button
+                          className="msgMenuItem danger"
+                          type="button"
+                          onClick={() => doDeleteForEveryone(m)}
+                        >
+                          Delete for everyone
+                        </button>
+                      )}
                     </div>
-                  </div>
-                ) : (
-                  <div className="bubbleText">
-                    <HighlightedText text={m.text} query={searchQuery} />
-                  </div>
-                )}
+                  )}
 
-                {/* Meta */}
-                <div className="meta">
-                  {formatTime(m.createdAt)}
-                  {!!m.editedAt && !isDeleted && <span className="editedTag">edited</span>}
-                  {mine && <TickIcon status={status} />}
+                  {/* Content */}
+                  {isDeleted ? (
+                    <div className="bubbleDeleted">This message was deleted</div>
+                  ) : isEditing ? (
+                    <div className="editWrap">
+                      <input
+                        className="editInput"
+                        value={editDraft}
+                        onChange={(e) => setEditDraft(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") doEditSave(m);
+                          if (e.key === "Escape") {
+                            setEditingId(null);
+                            setEditDraft("");
+                          }
+                        }}
+                        autoFocus
+                      />
+                      <div className="editActions">
+                        <button
+                          className="editBtn ghost"
+                          type="button"
+                          onClick={() => {
+                            setEditingId(null);
+                            setEditDraft("");
+                          }}
+                        >
+                          Cancel
+                        </button>
+                        <button className="editBtn" type="button" onClick={() => doEditSave(m)}>
+                          Save
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="bubbleText">
+                      <HighlightedText text={m.text} query={searchQuery} />
+                    </div>
+                  )}
+
+                  {/* Meta */}
+                  <div className="meta">
+                    {formatTime(m.createdAt)}
+                    {!!m.editedAt && !isDeleted && <span className="editedTag">edited</span>}
+                    {mine && <TickIcon status={status} />}
+                  </div>
                 </div>
               </div>
             </div>
           );
         })}
+
 
         <div ref={bottomRef} />
       </div>
