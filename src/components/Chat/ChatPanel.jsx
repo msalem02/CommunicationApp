@@ -12,6 +12,7 @@ import {
   listenUser,
   editMessage,
   deleteMessageForMe,
+  deleteChatForMe,
   deleteMessageForEveryone,
   updateChatPreview,
 } from "../../firebase/chatApi";
@@ -156,6 +157,9 @@ export default function ChatPanel({ chatId, onBack }) {
   const [showToBottom, setShowToBottom] = useState(false);
   const chatBodyRef = useRef(null);
   const didInitialScrollRef = useRef(false);
+  const [chatMenuOpen, setChatMenuOpen] = useState(false);
+
+
 
   // Close message menu on outside click
   useEffect(() => {
@@ -217,8 +221,21 @@ export default function ChatPanel({ chatId, onBack }) {
   // Filter messages that are deleted for me
   const visibleMessages = useMemo(() => {
     if (!myUid) return messages;
-    return messages.filter((m) => !m?.deletedFor?.[myUid]);
-  }, [messages, myUid]);
+
+    const clearedMs = toMs(chat?.clearedAt?.[myUid]); // 0 if none
+
+    return messages.filter((m) => {
+      // hidden for me per-message
+      if (m?.deletedFor?.[myUid]) return false;
+
+      // chat cleared for me: show only messages after clearedAt
+      const msgMs = toMs(m?.createdAt);
+      if (clearedMs && msgMs && msgMs <= clearedMs) return false;
+
+      return true;
+    });
+  }, [messages, myUid, chat?.clearedAt]);
+
 
   // Auto scroll (only if near bottom)
   useEffect(() => {
@@ -293,6 +310,18 @@ export default function ChatPanel({ chatId, onBack }) {
     scrollToBottom("auto");
   }, [visibleMessages.length]);
 
+  useEffect(() => {
+    const onDoc = (e) => {
+      const inMenu = e.target.closest?.(".chatMoreMenu");
+      const inBtn = e.target.closest?.(".chatMoreWrap");
+      if (inMenu || inBtn) return;
+      setChatMenuOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, []);
+
+
   function goNext() {
     if (!matchIds.length) return;
     setMatchIndex((i) => (i + 1) % matchIds.length);
@@ -333,9 +362,9 @@ export default function ChatPanel({ chatId, onBack }) {
     setText("");
     setTyping(chatId, user.uid, false).catch(() => {});
 
-    await sendMessage({ chatId, senderId: user.uid, text: t });
-
     const other = chat?.members?.find((id) => id !== user.uid);
+    await sendMessage({ chatId, senderId: user.uid, text: t, otherUid: other });
+
     if (other) bumpUnread(chatId, other).catch(() => {});
   };
 
@@ -472,9 +501,38 @@ export default function ChatPanel({ chatId, onBack }) {
             <Phone size={18} />
           </button>
 
-          <button className="iconBtn" title="More">
-            <MoreVertical size={18} />
-          </button>
+          <div className="chatMoreWrap">
+            <button
+              className="iconBtn"
+              title="More"
+              onClick={() => setChatMenuOpen((v) => !v)}
+              type="button"
+            >
+              <MoreVertical size={18} />
+            </button>
+
+            {chatMenuOpen && (
+              <div className="chatMoreMenu" onClick={(e) => e.stopPropagation()}>
+                <button
+                  className="chatMoreItem danger"
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      await deleteChatForMe(chatId, myUid);
+                      setChatMenuOpen(false);
+                      onBack?.(); // ✅ return to chat list
+                    } catch (e) {
+                      console.error("deleteChatForMe failed:", e);
+                      alert(e?.message || String(e));
+                    }
+                  }}
+                >
+                  Delete chat
+                </button>
+              </div>
+            )}
+          </div>
+
         </div>
       </div>
 

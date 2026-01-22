@@ -130,7 +130,8 @@ export function listenMessages(chatId, cb) {
 }
 
 // Send text message (updates lastMessage + updatedAt)
-export async function sendMessage({ chatId, senderId, text }) {
+// Send text message (updates lastMessage + updatedAt)
+export async function sendMessage({ chatId, senderId, text, otherUid }) {
   await addDoc(collection(db, "chats", chatId, "messages"), {
     senderId,
     text,
@@ -138,15 +139,22 @@ export async function sendMessage({ chatId, senderId, text }) {
     createdAt: serverTimestamp(),
   });
 
-  await updateDoc(doc(db, "chats", chatId), {
+  const updates = {
     lastMessage: text,
     lastMessageSenderId: senderId,
-    lastMessageAt: serverTimestamp(),   // ✅ add this
+    lastMessageAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
-  });
+  };
 
+  // ✅ Unhide chat for sender (so it reappears in their list)
+  updates[`hiddenFor.${senderId}`] = deleteField();
 
+  // ✅ Unhide chat for receiver (so it reappears when they receive a message)
+  if (otherUid) updates[`hiddenFor.${otherUid}`] = deleteField();
+
+  await updateDoc(doc(db, "chats", chatId), updates);
 }
+
 
 /* ------------------------
    Typing indicator
@@ -327,5 +335,20 @@ export async function updateChatPreview(chatId, previewText, senderId) {
     lastMessage: previewText,
     lastMessageSenderId: senderId,
     updatedAt: serverTimestamp(),
+  });
+}
+
+// Delete chat for ME only (hide from my list + clear history for me)
+export async function deleteChatForMe(chatId, uid) {
+  const u = auth.currentUser;
+  if (!u) throw new Error("Not signed in");
+
+  const my = uid || u.uid;
+
+  await updateDoc(doc(db, "chats", chatId), {
+    [`hiddenFor.${my}`]: true,                 // hide chat from my list
+    [`clearedAt.${my}`]: serverTimestamp(),    // hide old messages for me
+    [`unread.${my}`]: 0,                       // optional: reset unread
+    [`lastReadAt.${my}`]: serverTimestamp(),   // optional: set read time
   });
 }

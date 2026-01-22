@@ -39,15 +39,19 @@ export default function Sidebar({ activeChatId, onSelectChat }) {
   };
 
   const filteredChats = chats.filter((c) => {
-  const s = search.trim().toLowerCase();
-  if (!s) return true;
+    // ✅ hide chats deleted for me
+    if (c?.hiddenFor?.[user.uid]) return false;
 
-  const idx = c.members?.[0] === user.uid ? 1 : 0;
-  const title = (c.memberNames?.[idx] || "").toLowerCase();
-  const last = (c.lastMessage || "").toLowerCase();
+    const s = search.trim().toLowerCase();
+    if (!s) return true;
 
-  return title.includes(s) || last.includes(s);
-});
+    const idx = c.members?.[0] === user.uid ? 1 : 0;
+    const title = (c.memberNames?.[idx] || "").toLowerCase();
+    const last = (c.lastMessage || "").toLowerCase();
+
+    return title.includes(s) || last.includes(s);
+  });
+
 
 
   return (
