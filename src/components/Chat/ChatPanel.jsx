@@ -82,6 +82,39 @@ function toMs(ts) {
   }
 }
 
+function isSameDay(aMs, bMs) {
+  if (!aMs || !bMs) return false;
+  const a = new Date(aMs);
+  const b = new Date(bMs);
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+}
+
+function formatDayLabel(ms) {
+  if (!ms) return "";
+  const d = new Date(ms);
+
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startOfThatDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+
+  const diffDays = Math.round((startOfToday - startOfThatDay) / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return "Yesterday";
+
+  return d.toLocaleDateString([], {
+    weekday: "short",
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+
 function escapeRegExp(str) {
   return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -506,26 +539,36 @@ return (
     )}
 
     <div className="chatBody" ref={chatBodyRef} onScroll={handleChatScroll}>
-      <div className="dayPill">Today</div>
-
-      {messages.map((m) => {
+      {messages.map((m, i) => {
         const mine = m.senderId === user.uid;
         const status = mine ? getTickStatus(m) : null;
 
-        return (
-          <div
-            key={m.id}
-            ref={(el) => (msgRefs.current[m.id] = el)} // ✅ needed for arrows jump
-            className={`msgRow ${mine ? "right" : ""}`}
-          >
-            <div className={`bubble ${mine ? "out" : "in"}`}>
-              <div className="bubbleText">
-                <HighlightedText text={m.text} query={searchQuery} /> {/* ✅ highlight */}
-              </div>
+        const curMs = toMs(m.createdAt);
+        const prevMs = i > 0 ? toMs(messages[i - 1]?.createdAt) : 0;
 
-              <div className="meta">
-                {formatTime(m.createdAt)}
-                {mine && <TickIcon status={status} />}
+        const showDatePill =
+          i === 0 ||
+          !isSameDay(curMs, prevMs); // show pill when day changes
+
+        return (
+          <div key={m.id}>
+            {showDatePill && (
+              <div className="dayPill">{formatDayLabel(curMs)}</div>
+            )}
+
+            <div
+              ref={(el) => (msgRefs.current[m.id] = el)}
+              className={`msgRow ${mine ? "right" : ""}`}
+            >
+              <div className={`bubble ${mine ? "out" : "in"}`}>
+                <div className="bubbleText">
+                  <HighlightedText text={m.text} query={searchQuery} />
+                </div>
+
+                <div className="meta">
+                  {formatTime(m.createdAt)}
+                  {mine && <TickIcon status={status} />}
+                </div>
               </div>
             </div>
           </div>

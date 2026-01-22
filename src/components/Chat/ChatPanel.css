@@ -367,3 +367,8 @@
 .toBottomBtn:hover{
   background: rgba(255,255,255,1);
 }
+.dayPill{
+  position: sticky;
+  top: 12px;        /* makes it stick a bit while scrolling (optional) */
+  z-index: 2;
+}
