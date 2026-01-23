@@ -6,26 +6,127 @@
   background: #ffffff; /* full screen white like Figma */
 }
 
+/* 2-column shell */
 .appGrid{
-  height: 100vh;        /* full height */
+  height: 100dvh;        /* better on mobile than 100vh */
   width: 100%;
   display: flex;
+  overflow: hidden;      /* prevents sideways scroll */
 }
 
+/* LEFT: chat list */
 .leftPane{
-  width: 360px;
+  /* keep Figma look but allow scaling */
+  width: clamp(300px, 26vw, 360px);
+  min-width: 280px;
+  max-width: 420px;
+
   border-right: 1px solid var(--border);
   background: #fff;
+
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;      /* internal list should scroll */
 }
 
+/* RIGHT: chat area */
 .rightPane{
   flex: 1;
   background: #fff;
-  min-width: 0;
+  min-width: 0;          /* IMPORTANT: allows flex child to shrink */
+  overflow: hidden;      /* internal messages should scroll */
 }
 
+/* =========================
+   4K / Ultra-wide
+   ========================= */
+@media (min-width: 2560px){
+  .leftPane{
+    width: clamp(360px, 22vw, 440px);
+    max-width: 480px;
+  }
+}
+
+/* =========================
+   Large desktops
+   ========================= */
+@media (max-width: 1920px){
+  .leftPane{
+    width: clamp(320px, 24vw, 360px);
+  }
+}
+
+/* =========================
+   Laptops / smaller desktops
+   ========================= */
+@media (max-width: 1440px){
+  .leftPane{
+    width: clamp(300px, 28vw, 340px);
+  }
+}
+
+@media (max-width: 1280px){
+  .leftPane{
+    width: 320px;
+    min-width: 320px;
+  }
+}
+
+/* =========================
+   Tablets
+   Keep 2 columns until 820px
+   ========================= */
+@media (max-width: 1024px){
+  .leftPane{
+    width: 300px;
+    min-width: 300px;
+  }
+}
+
+/* =========================
+   Mobile / Small tablets
+   Single-column behavior like your Figma
+   ========================= */
 /* mobile */
-@media (max-width: 768px){
-  .leftPane, .rightPane{ width: 100%; }
-  .hideMobile{ display: none; }
+@media (max-width: 820px){
+  .appGrid{
+    height: 100dvh;
+    overflow: hidden;
+  }
+
+  .leftPane,
+  .rightPane{
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    border-right: 0;
+  }
+
+  /* IMPORTANT: only hide what React tells it to hide */
+  .hideMobile{
+    display: none !important;
+  }
+}
+
+
+/* =========================
+   Phones
+   ========================= */
+@media (max-width: 480px){
+  .page{
+    min-height: 100dvh;
+  }
+  .appGrid{
+    width: 100%;
+    overflow-x: hidden;
+  }
+}
+
+/* =========================
+   Very small phones
+   ========================= */
+@media (max-width: 360px){
+  .appGrid{
+    height: 100dvh;
+  }
 }

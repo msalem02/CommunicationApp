@@ -501,3 +501,248 @@
   color: #ef4444;
   font-weight: 800;
 }
+
+
+/* =========================================
+   Responsive additions (NO design changes)
+   Paste at END of ChatPanel.css
+   ========================================= */
+
+/* 1) Make body padding responsive but same feel */
+.chatBody{
+  padding: clamp(12px, 1.4vw, 18px);
+}
+
+/* 2) Make bubbles responsive: keep Figma look, scale per screen */
+.bubble{
+  max-width: clamp(260px, 42vw, 520px); /* phones -> desktop -> 4K */
+  border-radius: 14px;                 /* keep your radius */
+}
+
+/* Keep text readable on very large & very small screens */
+.bubbleText{
+  font-size: clamp(12px, 0.95vw, 13px); /* stays ~13px desktop */
+}
+
+/* 3) Input pill: centered and responsive width */
+.chatInputPill{
+  max-width: min(760px, calc(100% - 24px)); /* never overflow on phones */
+  height: clamp(52px, 4.2vw, 56px);         /* keeps same desktop height */
+  padding: 0 clamp(12px, 1.2vw, 16px);
+  border-radius: 16px;
+}
+
+/* Input font scale without changing look */
+.chatInput{
+  font-size: clamp(14px, 1.2vw, 16px);
+}
+
+/* 4) Emoji popup & to-bottom button adapt on small screens */
+.emojiPop{
+  left: clamp(10px, 2vw, 18px);
+  bottom: clamp(68px, 8vw, 74px);
+  max-width: calc(100vw - 20px);
+}
+
+.toBottomBtn{
+  right: clamp(10px, 2vw, 18px);
+  bottom: clamp(86px, 10vw, 92px);
+}
+
+/* 5) Keep chat content visually centered on huge screens */
+@media (min-width: 1920px){
+  .chatInputWrap{
+    padding: 16px 22px;
+  }
+
+  .chatBody{
+    padding: 18px 22px;
+  }
+
+  .bubble{
+    max-width: 560px; /* a little wider on huge screens */
+  }
+
+  .chatInputPill{
+    max-width: 860px;
+  }
+}
+
+/* 6) 4K ultra-wide */
+@media (min-width: 2560px){
+  .bubble{
+    max-width: 620px;
+  }
+  .chatInputPill{
+    max-width: 980px;
+  }
+}
+
+/* 7) Tablets: slightly tighter spacing, keep two-column layouts clean */
+@media (max-width: 1024px){
+  .chatHeader{
+    padding: 10px 12px;
+  }
+
+  .chatInputWrap{
+    padding: 12px 14px;
+  }
+
+  .bubble{
+    max-width: min(520px, 72%);
+  }
+}
+
+/* 8) Small tablets / phones: match Figma mobile feel */
+@media (max-width: 820px){
+  .chatBody{
+    padding: 12px;
+  }
+
+  .chatHeader{
+    padding: 10px 10px;
+    gap: 8px;
+  }
+
+  .iconBtn{
+    width: 34px;
+    height: 34px;
+    border-radius: 12px;
+  }
+
+  .avatarSmall{
+    width: 36px;
+    height: 36px;
+  }
+
+  .bubble{
+    max-width: 84%;
+    padding: 9px 11px;
+  }
+
+  .chatInputWrap{
+    padding: 12px;
+  }
+
+  .chatInputPill{
+    max-width: 100%;
+  }
+}
+
+/* 9) Phones */
+@media (max-width: 480px){
+  .headerName{ font-size: 12px; }
+  .headerStatus{ font-size: 10px; }
+
+  .bubble{
+    max-width: 88%;
+  }
+
+  .meta{
+    font-size: 10px;
+  }
+
+  /* avoid accidental horizontal scrolling */
+  .chatPanel, .chatBody{
+    overflow-x: hidden;
+  }
+
+  .bubbleText{
+    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
+}
+
+/* 10) Very small phones */
+@media (max-width: 360px){
+  .bubble{
+    max-width: 92%;
+  }
+
+  .chatInputPill{
+    height: 50px;
+    border-radius: 14px;
+  }
+
+  .emojiBtn{
+    width: 32px;
+    height: 32px;
+  }
+
+  .sendBtn{
+    width: 36px;
+    height: 36px;
+  }
+}
+
+/* =========================
+   Chat search overflow fix
+   ========================= */
+@media (max-width: 470px){
+  .chatSearchPill{
+    flex-wrap: nowrap;        /* force single line */
+    align-items: center;
+    gap: 6px;
+    padding: 8px 10px;
+  }
+
+  .chatSearchIcon{
+    width: 22px;
+    height: 22px;
+    border-radius: 10px;
+    flex: 0 0 auto;
+    font-size: 14px;
+  }
+
+  /* KEY: allow input to shrink instead of pushing buttons out */
+  .chatSearchInput{
+    flex: 1 1 auto;
+    min-width: 0;             /* IMPORTANT */
+    height: 32px;
+    font-size: 13px;
+  }
+
+  .chatSearchCount{
+    min-width: 44px;
+    padding: 5px 8px;
+    font-size: 11px;
+    flex: 0 0 auto;
+  }
+
+  .chatSearchBtn{
+    width: 30px;
+    height: 30px;
+    flex: 0 0 auto;
+  }
+}
+
+/* Extra small phones: tighten more but still one line */
+@media (max-width: 360px){
+  .chatSearchPill{
+    gap: 5px;
+    padding: 7px 8px;
+  }
+
+  .chatSearchInput{
+    font-size: 12px;
+  }
+
+  .chatSearchCount{
+    min-width: 40px;
+    padding: 4px 7px;
+    font-size: 11px;
+  }
+
+  .chatSearchBtn{
+    width: 28px;
+    height: 28px;
+  }
+}
+
+/* If you STILL overflow at extremely small widths (320px),
+   hide the count (optional) but keep arrows + close in one line */
+@media (max-width: 320px){
+  .chatSearchCount{
+    display: none;
+  }
+}

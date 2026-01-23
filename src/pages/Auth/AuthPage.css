@@ -65,3 +65,108 @@
   font-weight: 700;
   text-decoration: none;
 }
+
+
+/* =========================================
+   Responsive additions (NO design changes)
+   Paste at END of AuthPage.css
+   ========================================= */
+
+/* Mobile-safe viewport height */
+.authPage{
+  min-height: 100dvh;
+}
+
+/* 2K / 4K: card can be slightly bigger so it doesn't look tiny */
+@media (min-width: 1920px){
+  .authCard{
+    max-width: 520px;
+    padding: 28px;
+    border-radius: 20px;
+  }
+
+  .authTitle{
+    font-size: 30px;
+  }
+
+  .authSub{
+    font-size: 14px;
+  }
+
+  .authInput{
+    font-size: 15px;
+    padding: 13px 15px;
+  }
+
+  .authBtn{
+    padding: 13px 15px;
+  }
+}
+
+/* Tablets */
+@media (max-width: 1024px){
+  .authPage{
+    padding: 20px;
+  }
+}
+
+/* Phones */
+@media (max-width: 480px){
+  .authPage{
+    padding: 14px;
+  }
+
+  .authCard{
+    max-width: 100%;
+    padding: 18px;
+    border-radius: 16px;
+  }
+
+  .authTitle{
+    font-size: 22px;
+  }
+
+  .authSub{
+    font-size: 12px;
+    margin-bottom: 14px;
+  }
+
+  .authInput{
+    padding: 11px 12px;
+    border-radius: 11px;
+  }
+
+  .authBtn{
+    padding: 11px 12px;
+    border-radius: 11px;
+  }
+
+  .authLinkRow{
+    font-size: 12px;
+  }
+}
+
+/* Very small phones */
+@media (max-width: 360px){
+  .authCard{
+    padding: 16px;
+  }
+
+  .authTitle{
+    font-size: 20px;
+  }
+}
+
+/* Short height screens (landscape phones) */
+@media (max-height: 520px){
+  .authPage{
+    place-items: start;
+    padding-top: 16px;
+    padding-bottom: 16px;
+  }
+
+  .authCard{
+    max-height: calc(100dvh - 32px);
+    overflow: auto;
+  }
+}
