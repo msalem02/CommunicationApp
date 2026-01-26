@@ -1,6 +1,4 @@
-/* App.css (Figma-safe) */
 
-/* Let AppShell control sizing; do NOT constrain root */
 #root{
   width: 100%;
   height: 100%;
@@ -8,7 +6,6 @@
   padding: 0;
 }
 
-/* Optional: if you still use the Vite demo somewhere, keep these scoped */
 .viteDemo .logo {
   height: 6em;
   padding: 1.5em;

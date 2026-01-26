@@ -39,7 +39,7 @@ export default function Sidebar({ activeChatId, onSelectChat }) {
   };
 
   const filteredChats = chats.filter((c) => {
-    // ✅ hide chats deleted for me
+    // hide chats deleted for me
     if (c?.hiddenFor?.[user.uid]) return false;
 
     const s = search.trim().toLowerCase();
@@ -110,7 +110,7 @@ export default function Sidebar({ activeChatId, onSelectChat }) {
                 type="button"
                 onClick={() => {
                   setMenuOpen(false);
-                  logout?.(); // ✅ your existing logout function
+                  logout?.(); // your existing logout function
                 }}
               >
                 Sign out

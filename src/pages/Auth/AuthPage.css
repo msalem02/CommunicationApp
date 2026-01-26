@@ -1,5 +1,6 @@
 .authPage{
   min-height: 100vh;
+  min-height: 100dvh;
   width: 100%;
   background: #ffffff;
   display: grid;
@@ -66,18 +67,6 @@
   text-decoration: none;
 }
 
-
-/* =========================================
-   Responsive additions (NO design changes)
-   Paste at END of AuthPage.css
-   ========================================= */
-
-/* Mobile-safe viewport height */
-.authPage{
-  min-height: 100dvh;
-}
-
-/* 2K / 4K: card can be slightly bigger so it doesn't look tiny */
 @media (min-width: 1920px){
   .authCard{
     max-width: 520px;
@@ -103,14 +92,12 @@
   }
 }
 
-/* Tablets */
 @media (max-width: 1024px){
   .authPage{
     padding: 20px;
   }
 }
 
-/* Phones */
 @media (max-width: 480px){
   .authPage{
     padding: 14px;
@@ -146,7 +133,6 @@
   }
 }
 
-/* Very small phones */
 @media (max-width: 360px){
   .authCard{
     padding: 16px;
@@ -157,7 +143,6 @@
   }
 }
 
-/* Short height screens (landscape phones) */
 @media (max-height: 520px){
   .authPage{
     place-items: start;

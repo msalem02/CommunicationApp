@@ -1,4 +1,3 @@
-// src/app/AppShell.jsx
 import { useEffect, useState } from "react";
 import "./AppShell.css";
 import Sidebar from "../components/Sidebar/Sidebar";

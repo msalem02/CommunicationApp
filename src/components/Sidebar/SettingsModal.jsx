@@ -1,4 +1,3 @@
-// src/components/Sidebar/SettingsModal.jsx
 import { useEffect, useRef, useState } from "react";
 import "./SettingsModal.css";
 import { useAuth } from "../../context/AuthContext";
@@ -31,7 +30,7 @@ export default function SettingsModal({ open, onClose }) {
     };
   }, []);
 
-  // ✅ Load ONCE when opening (no listener; no overwriting drafts)
+  // Load ONCE when opening (no listener; no overwriting drafts)
   useEffect(() => {
     if (!open || !user?.uid) return;
 
@@ -42,10 +41,10 @@ export default function SettingsModal({ open, onClose }) {
       setSaving(false);
       setLoading(true);
 
-      // ✅ Only clear password on open (not name/phone)
+      //Only clear password on open (not name/phone)
       setPassword("");
 
-      // ✅ Immediately show something (fallback) while loading:
+      // Immediately show something (fallback) while loading:
       setName(user.displayName || "");
       setPhone(""); // phone is only from Firestore
 
@@ -56,10 +55,10 @@ export default function SettingsModal({ open, onClose }) {
 
         setProfile(data || null);
 
-        // ✅ name: Firestore -> fallback Auth
+        // name: Firestore -> fallback Auth
         setName((data?.displayName ?? user.displayName ?? "").toString());
 
-        // ✅ phone: ONLY Firestore phone
+        // phone: ONLY Firestore phone
         setPhone(data?.phone ? String(data.phone) : "");
       } catch (e) {
         if (cancelled || !aliveRef.current) return;
@@ -110,10 +109,10 @@ export default function SettingsModal({ open, onClose }) {
         await updateMyPassword(newPass);
       }
 
-      setMsg("Saved ✅");
+      setMsg("Saved successfully.");
       setPassword("");
 
-      // ✅ re-fetch once so profile state matches database (optional but good)
+      // re-fetch once so profile state matches database
       const fresh = await getUserDoc(user.uid);
       setProfile(fresh || null);
       setName((fresh?.displayName ?? newName).toString());

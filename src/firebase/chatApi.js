@@ -14,20 +14,13 @@ import {
   deleteField,
   increment,
   getDoc,
-  writeBatch,     // ✅ ADD THIS
+  writeBatch,     
 } from "firebase/firestore";
-
-
 import { db } from "./firebase";
-
-// add these imports at the top with your others
 import { updateProfile, updatePassword } from "firebase/auth";
-
-// and import auth from your firebase file
 import { auth } from "./firebase";
 
 
-// Stable chat id: same for both users
 export const makeChatId = (uidA, uidB) => [uidA, uidB].sort().join("_");
 
 // Create/Update user profile document
@@ -48,7 +41,7 @@ export async function fetchAllUsers() {
   return snap.docs.map((d) => d.data());
 }
 
-// Ensure a chat exists (merge-safe)
+// Ensure a chat exists 
 export async function ensureChat(me, other) {
   const chatId = makeChatId(me.uid, other.uid);
   const ref = doc(db, "chats", chatId);
@@ -69,7 +62,7 @@ export async function ensureChat(me, other) {
   return chatId;
 }
 
-// Listen my chats (ordered query first; fallback if index missing)
+// Listen my chats 
 export function listenMyChats(uid, cb) {
   const q1 = query(
     collection(db, "chats"),
@@ -130,7 +123,6 @@ export function listenMessages(chatId, cb) {
 }
 
 // Send text message (updates lastMessage + updatedAt)
-// Send text message (updates lastMessage + updatedAt)
 export async function sendMessage({ chatId, senderId, text, otherUid }) {
   await addDoc(collection(db, "chats", chatId, "messages"), {
     senderId,
@@ -146,19 +138,17 @@ export async function sendMessage({ chatId, senderId, text, otherUid }) {
     updatedAt: serverTimestamp(),
   };
 
-  // ✅ Unhide chat for sender (so it reappears in their list)
+  // Unhide chat for sender (so it reappears in their list)
   updates[`hiddenFor.${senderId}`] = deleteField();
 
-  // ✅ Unhide chat for receiver (so it reappears when they receive a message)
+  // Unhide chat for receiver (so it reappears when they receive a message)
   if (otherUid) updates[`hiddenFor.${otherUid}`] = deleteField();
 
   await updateDoc(doc(db, "chats", chatId), updates);
 }
 
 
-/* ------------------------
-   Typing indicator
------------------------- */
+//Typing indicator
 export async function setTyping(chatId, uid, isTyping) {
   const ref = doc(db, "chats", chatId);
 
@@ -169,9 +159,8 @@ export async function setTyping(chatId, uid, isTyping) {
   }
 }
 
-/* ------------------------
-   Unread counters
------------------------- */
+
+   //Unread counters
 export async function bumpUnread(chatId, targetUid) {
   await updateDoc(doc(db, "chats", chatId), {
     [`unread.${targetUid}`]: increment(1),
@@ -186,7 +175,7 @@ export async function markRead(chatId, uid) {
 }
 
 
-// --- Presence (online / last seen) ---
+//online / last seen
 export async function setUserPresence(uid, isOnline) {
   await updateDoc(doc(db, "users", uid), {
     isOnline,
@@ -201,9 +190,6 @@ export function listenUser(uid, cb) {
 }
 
 
-
-
-
 // Update display name in Firebase Auth + Firestore users doc
 export async function updateMyDisplayName(newName) {
   const u = auth.currentUser;
@@ -216,14 +202,14 @@ export async function updateMyDisplayName(newName) {
   });
 }
 
-// Update password (may require recent login)
+// Update password 
 export async function updateMyPassword(newPassword) {
   const u = auth.currentUser;
   if (!u) throw new Error("Not signed in");
   await updatePassword(u, newPassword);
 }
 
-// Save phone number to Firestore users doc (example field)
+// Save phone number to Firestore users doc 
 export async function updateMyPhone(phone) {
   const u = auth.currentUser;
   if (!u) throw new Error("Not signed in");
@@ -283,10 +269,8 @@ export async function updateMyNameEverywhere(newName) {
 }
 
 
-// -------------------------
-// Message edit / delete
-// -------------------------
 
+// Message edit / delete
 export async function editMessage(chatId, messageId, newText) {
   const u = auth.currentUser;
   if (!u) throw new Error("Not signed in");
@@ -315,7 +299,7 @@ export async function deleteMessageForMe(chatId, messageId, uid) {
   });
 }
 
-// Delete for EVERYONE (soft delete)
+// Delete for EVERYONE 
 export async function deleteMessageForEveryone(chatId, messageId) {
   const u = auth.currentUser;
   if (!u) throw new Error("Not signed in");
@@ -329,7 +313,7 @@ export async function deleteMessageForEveryone(chatId, messageId) {
   });
 }
 
-// Update sidebar preview (lastMessage) safely from UI actions
+// Update sidebar preview (lastMessage)
 export async function updateChatPreview(chatId, previewText, senderId) {
   await updateDoc(doc(db, "chats", chatId), {
     lastMessage: previewText,
@@ -346,9 +330,9 @@ export async function deleteChatForMe(chatId, uid) {
   const my = uid || u.uid;
 
   await updateDoc(doc(db, "chats", chatId), {
-    [`hiddenFor.${my}`]: true,                 // hide chat from my list
-    [`clearedAt.${my}`]: serverTimestamp(),    // hide old messages for me
-    [`unread.${my}`]: 0,                       // optional: reset unread
-    [`lastReadAt.${my}`]: serverTimestamp(),   // optional: set read time
+    [`hiddenFor.${my}`]: true,                
+    [`clearedAt.${my}`]: serverTimestamp(),   
+    [`unread.${my}`]: 0,                       
+    [`lastReadAt.${my}`]: serverTimestamp(),   
   });
 }

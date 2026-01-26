@@ -1,21 +1,7 @@
-// src/components/Chat/ChatPanel.jsx
 import { MoreVertical, Phone, Search, ArrowLeft } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import "./ChatPanel.css";
-import {
-  listenMessages,
-  sendMessage,
-  listenChat,
-  setTyping,
-  bumpUnread,
-  markRead,
-  listenUser,
-  editMessage,
-  deleteMessageForMe,
-  deleteChatForMe,
-  deleteMessageForEveryone,
-  updateChatPreview,
-} from "../../firebase/chatApi";
+import {listenMessages,sendMessage,listenChat,setTyping,bumpUnread,markRead,listenUser,editMessage,deleteMessageForMe,deleteChatForMe,deleteMessageForEveryone,updateChatPreview,} from "../../firebase/chatApi";
 import { useAuth } from "../../context/AuthContext";
 import EmojiPicker from "emoji-picker-react";
 
@@ -63,7 +49,6 @@ function TickIcon({ status }) {
   );
 }
 
-// Safe timestamp to ms
 function toMs(ts) {
   if (!ts) return 0;
   try {
@@ -175,7 +160,7 @@ export default function ChatPanel({ chatId, onBack }) {
   const [emojiOpen, setEmojiOpen] = useState(false);
 
   // Message menu + edit
-  const [menuFor, setMenuFor] = useState(null); // messageId
+  const [menuFor, setMenuFor] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [editDraft, setEditDraft] = useState("");
 

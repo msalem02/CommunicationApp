@@ -8,6 +8,7 @@
   text-align: left;
   cursor: pointer;
 }
+
 .chatRow:hover{ background: #fafafa; }
 .chatRow.active{ background: #f7f7f7; }
 
@@ -27,7 +28,11 @@
   color: var(--navy);
 }
 
-.chatMain{ flex: 1; min-width: 0; }
+.chatMain{
+  flex: 1;
+  min-width: 0;
+}
+
 .rowTicks{
   display: inline-flex;
   align-items: center;
@@ -35,18 +40,10 @@
   transform: translateY(1px);
 }
 
-.rowTicksGray{
-  color: #9aa3af; /* gray */
-}
+.rowTicksGray{ color: #9aa3af; }
+.rowTicksRead{ color: #34b7f1; }
 
-.rowTicksRead{
-  color: #34b7f1; /* WhatsApp blue */
-}
-
-.rowTicks svg{
-  display: block;
-}
-
+.rowTicks svg{ display: block; }
 
 .chatTopLine{
   display: flex;
@@ -104,17 +101,12 @@
   display: grid;
   place-items: center;
 }
+
 .typingText{
-  color: #2fb66c;     /* WhatsApp-like green */
+  color: #2fb66c;
   font-weight: 700;
 }
- 
-/* =========================================
-   Responsive additions (NO design changes)
-   Paste at END of ChatRow.css
-   ========================================= */
 
-/* Smooth scaling across screens */
 .chatRow{
   padding: clamp(8px, 1.2vw, 10px) clamp(10px, 1.4vw, 12px);
   gap: clamp(10px, 1.4vw, 12px);
@@ -147,29 +139,28 @@
   font-size: clamp(10px, 0.9vw, 11px);
 }
 
-/* 2K / 4K: give a bit more room (same design, just scales nicely) */
 @media (min-width: 1920px){
   .chatRow{
     padding: 12px 14px;
     gap: 14px;
   }
+
   .avatar{
     width: 46px;
     height: 46px;
   }
+
   .chatName{ font-size: 14px; }
   .chatMsg{ font-size: 13px; }
   .chatTime{ font-size: 12px; }
 }
 
-/* Tablets */
 @media (max-width: 1024px){
   .chatRow{
     padding: 10px 12px;
   }
 }
 
-/* Phones */
 @media (max-width: 480px){
   .chatRow{
     padding: 9px 10px;
@@ -182,7 +173,6 @@
   }
 }
 
-/* Very small phones */
 @media (max-width: 360px){
   .chatRow{
     padding: 8px 9px;
@@ -195,6 +185,6 @@
   }
 
   .chatName{
-    max-width: 190px; /* prevents time from being pushed off */
+    max-width: 190px;
   }
 }

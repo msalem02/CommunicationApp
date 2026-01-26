@@ -1,4 +1,3 @@
-// src/components/Sidebar/ChatRow.jsx
 import "./ChatRow.css";
 import { useAuth } from "../../context/AuthContext";
 

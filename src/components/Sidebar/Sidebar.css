@@ -19,6 +19,7 @@
   border-radius: 12px;
   cursor: pointer;
 }
+
 .iconBtn:hover{ background: #f3f3f3; }
 
 .searchPill{
@@ -32,6 +33,7 @@
 }
 
 .searchIcon{ color: #777; }
+
 .searchInput{
   border: none;
   outline: none;
@@ -45,6 +47,7 @@
   overflow: auto;
   padding-top: 4px;
 }
+
 .emptyHint{
   padding: 14px;
   font-size: 13px;
@@ -94,13 +97,6 @@
   font-weight: 600;
 }
 
-
-/* =========================================
-   Responsive additions (NO design changes)
-   Paste at END of Sidebar.css
-   ========================================= */
-
-/* Smooth scaling without changing desktop look */
 .sidebarTop{
   padding: clamp(8px, 1.2vw, 10px) clamp(10px, 1.4vw, 12px);
   gap: clamp(8px, 1.2vw, 10px);
@@ -121,45 +117,45 @@
   font-size: clamp(12px, 1.05vw, 13px);
 }
 
-/* 2K / 4K: slight upscale so it doesn’t look tiny */
 @media (min-width: 1920px){
   .sidebarTop{
     padding: 12px 14px;
     gap: 12px;
   }
+
   .iconBtn{
     width: 40px;
     height: 40px;
   }
+
   .searchInput{
     font-size: 14px;
   }
+
   .searchPill{
     padding: 9px 14px;
   }
+
   .sidebarMenuDropdown{
     min-width: 210px;
   }
 }
 
-/* Tablets */
 @media (max-width: 1024px){
   .sidebarMenuDropdown{
     top: 42px;
   }
 }
 
-/* Small tablets / phones */
 @media (max-width: 820px){
   .sidebarTop{
     padding: 10px 10px;
   }
 
   .searchPill{
-    border-radius: 16px; /* still soft, same feel */
+    border-radius: 16px;
   }
 
-  /* dropdown should not overflow off-screen */
   .sidebarMenuDropdown{
     left: 0;
     right: 0;
@@ -167,7 +163,6 @@
   }
 }
 
-/* Phones */
 @media (max-width: 480px){
   .sidebarTop{
     padding: 9px 10px;
@@ -190,7 +185,6 @@
   }
 }
 
-/* Very small phones */
 @media (max-width: 360px){
   .sidebarTop{
     padding: 8px 9px;

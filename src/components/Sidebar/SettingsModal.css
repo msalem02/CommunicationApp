@@ -9,6 +9,8 @@
 
 .setCard{
   width: min(460px, 92vw);
+  max-height: min(82vh, 720px);
+  overflow: auto;
   background: rgba(255,255,255,0.96);
   backdrop-filter: blur(12px);
   border: 1px solid rgba(0,0,0,0.06);
@@ -108,38 +110,24 @@
   color: #111827;
 }
 
-
-/* =========================================
-   Responsive additions (NO design changes)
-   Paste at END of SettingsModal.css
-   ========================================= */
-
-/* Prevent cut-off on small height screens */
-.setCard{
-  max-height: min(82vh, 720px);
-  overflow: auto;
-}
-
-/* 2K / 4K: modal can be a little wider while keeping same look */
 @media (min-width: 1920px){
   .setCard{
     width: min(520px, 92vw);
     padding: 18px;
     border-radius: 20px;
   }
+
   .setTitle{
     font-size: 19px;
   }
 }
 
-/* Tablets / small laptops */
 @media (max-width: 1024px){
   .setCard{
     width: min(460px, 94vw);
   }
 }
 
-/* Phones */
 @media (max-width: 480px){
   .setCard{
     width: 94vw;
@@ -179,7 +167,6 @@
   }
 }
 
-/* Very small phones */
 @media (max-width: 360px){
   .setCard{
     padding: 12px;
