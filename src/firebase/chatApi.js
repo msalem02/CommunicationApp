@@ -123,6 +123,7 @@ export function listenMessages(chatId, cb) {
 }
 
 // Send text message (updates lastMessage + updatedAt)
+// Send text message (updates lastMessage + updatedAt)
 export async function sendMessage({ chatId, senderId, text, otherUid }) {
   await addDoc(collection(db, "chats", chatId, "messages"), {
     senderId,
@@ -138,14 +139,24 @@ export async function sendMessage({ chatId, senderId, text, otherUid }) {
     updatedAt: serverTimestamp(),
   };
 
-  // Unhide chat for sender (so it reappears in their list)
+  // Unhide chat for sender
   updates[`hiddenFor.${senderId}`] = deleteField();
 
-  // Unhide chat for receiver (so it reappears when they receive a message)
-  if (otherUid) updates[`hiddenFor.${otherUid}`] = deleteField();
+  // ✅ Support DM (string) or Group (array)
+  const targets = Array.isArray(otherUid)
+    ? otherUid
+    : otherUid
+    ? [otherUid]
+    : [];
+
+  // Unhide chat for all receivers
+  targets.forEach((uid) => {
+    updates[`hiddenFor.${uid}`] = deleteField();
+  });
 
   await updateDoc(doc(db, "chats", chatId), updates);
 }
+
 
 
 //Typing indicator
@@ -335,4 +346,57 @@ export async function deleteChatForMe(chatId, uid) {
     [`unread.${my}`]: 0,                       
     [`lastReadAt.${my}`]: serverTimestamp(),   
   });
+}
+
+
+export async function createGroupChat({ title, creator, members }) {
+  // members: array of user objects [{ uid, email, displayName }]
+  // creator: { uid, email, displayName }
+
+  const u = auth.currentUser;
+  if (!u) throw new Error("Not signed in");
+
+  const cleanTitle = String(title || "").trim();
+  if (!cleanTitle) throw new Error("Group name is required.");
+
+  // Ensure creator included + unique members
+  const byUid = new Map();
+  [creator, ...members].forEach((m) => {
+    if (m?.uid) byUid.set(m.uid, m);
+  });
+  const list = Array.from(byUid.values());
+
+  if (list.length < 3) {
+    // creator + at least 2 others (you can change this rule)
+    throw new Error("Pick at least 2 people for a group.");
+  }
+
+  // Stable ordering helps memberNames stay aligned
+  list.sort((a, b) => a.uid.localeCompare(b.uid));
+
+  const memberUids = list.map((m) => m.uid);
+  const memberNames = list.map((m) => m.displayName || (m.email || "").split("@")[0] || "User");
+  const memberEmails = list.map((m) => m.email || "");
+
+  const unread = {};
+  memberUids.forEach((id) => (unread[id] = 0));
+
+  const ref = await addDoc(collection(db, "chats"), {
+    type: "group",
+    title: cleanTitle,
+    createdBy: creator.uid,
+
+    members: memberUids,
+    memberNames,
+    memberEmails,
+
+    lastMessage: "",
+    lastMessageSenderId: null,
+    lastMessageAt: null,
+    updatedAt: serverTimestamp(),
+
+    unread,
+  });
+
+  return ref.id;
 }

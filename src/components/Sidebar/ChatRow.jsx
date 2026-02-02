@@ -54,22 +54,42 @@ function initials(name) {
 export default function ChatRow({ chat, active, onClick }) {
   const { user } = useAuth();
 
+  const isGroup = chat.type === "group";
   const idx = chat.members?.[0] === user.uid ? 1 : 0;
-  const title = chat.memberNames?.[idx] || "Chat";
-
+  const title = isGroup ? (chat.title || "Group") : (chat.memberNames?.[idx] || "Chat");
   const unread = chat.unread?.[user.uid] || 0;
   const isMine = chat.lastMessageSenderId === user.uid;
-  const otherUid = chat.members?.find((id) => id !== user.uid);
-  const lastMsgMs = toMs(chat.lastMessageAt);
-  const otherReadMs = toMs(chat.lastReadAt?.[otherUid]);
-  const isRead = isMine && lastMsgMs > 0 && otherReadMs >= lastMsgMs;
+  const members = chat.members || [];
+  const others = members.filter((id) => id !== user.uid);
 
   const otherTyping = (() => {
+    if (isGroup) {
+      return others.some((uid) => {
+        const ts = chat.typing?.[uid];
+        const ms = toMs(ts);
+        return ms && Date.now() - ms < 2500;
+      });
+    }
+
+    const otherUid = others[0];
     const ts = otherUid ? chat.typing?.[otherUid] : null;
-    if (!ts) return false;
-    const ms = ts?.toDate ? ts.toDate().getTime() : Date.now();
-    return Date.now() - ms < 2500;
+    const ms = toMs(ts);
+    return ms && Date.now() - ms < 2500;
   })();
+
+  const lastMsgMs = toMs(chat.lastMessageAt);
+  let isRead = false;
+  if (isMine && lastMsgMs > 0) {
+    if (chat.type === "group") {
+      isRead = others.length
+        ? others.every((uid) => toMs(chat.lastReadAt?.[uid]) >= lastMsgMs)
+        : false;
+    } else {
+      const otherUid = others[0];
+      isRead = otherUid ? toMs(chat.lastReadAt?.[otherUid]) >= lastMsgMs : false;
+    }
+  }
+
 
   return (
     <button className={`chatRow ${active ? "active" : ""}`} onClick={onClick}>

@@ -222,29 +222,35 @@ export default function ChatPanel({ chatId, onBack }) {
 
   const otherName = useMemo(() => {
     if (!chat || !user) return "Chat";
+    if (chat.type === "group") return chat.title || "Group";
     const idx = chat.members?.[0] === user.uid ? 1 : 0;
     return chat.memberNames?.[idx] || "Chat";
   }, [chat, user]);
 
+
   const otherTyping = useMemo(() => {
     if (!chat || !user) return false;
-    const ouid = chat.members?.find((id) => id !== user.uid);
+    const others = (chat.members || []).filter((id) => id !== user.uid);
+    if (chat.type === "group") {
+      return others.some((uid) => {
+        const ts = chat.typing?.[uid];
+        return ts && Date.now() - toMs(ts) < 2500;
+      });
+    }
+    const ouid = others[0];
     const ts = ouid ? chat.typing?.[ouid] : null;
     if (!ts) return false;
     return Date.now() - toMs(ts) < 2500;
   }, [chat, user]);
 
-  // Filter messages that are deleted for me
   const visibleMessages = useMemo(() => {
     if (!myUid) return messages;
 
-    const clearedMs = toMs(chat?.clearedAt?.[myUid]); // 0 if none
+    const clearedMs = toMs(chat?.clearedAt?.[myUid]); 
 
     return messages.filter((m) => {
-      // hidden for me per-message
       if (m?.deletedFor?.[myUid]) return false;
 
-      // chat cleared for me: show only messages after clearedAt
       const msgMs = toMs(m?.createdAt);
       if (clearedMs && msgMs && msgMs <= clearedMs) return false;
 
@@ -378,11 +384,24 @@ export default function ChatPanel({ chatId, onBack }) {
     setText("");
     setTyping(chatId, user.uid, false).catch(() => {});
 
-    const other = chat?.members?.find((id) => id !== user.uid);
-    await sendMessage({ chatId, senderId: user.uid, text: t, otherUid: other });
+    const others = (chat?.members || []).filter((id) => id !== user.uid);
 
-    if (other) bumpUnread(chatId, other).catch(() => {});
+    // ✅ DM: pass one uid, Group: pass array
+    await sendMessage({
+      chatId,
+      senderId: user.uid,
+      text: t,
+      otherUid: chat?.type === "group" ? others : others[0],
+    });
+
+    // ✅ bump unread for everyone except me
+    if (chat?.type === "group") {
+      await Promise.all(others.map((uid) => bumpUnread(chatId, uid).catch(() => {})));
+    } else if (others[0]) {
+      bumpUnread(chatId, others[0]).catch(() => {});
+    }
   };
+
 
   const onEmojiClick = (emojiData) => {
     const emoji = emojiData.emoji;
@@ -413,12 +432,28 @@ export default function ChatPanel({ chatId, onBack }) {
     const msgMs = toMs(m.createdAt);
     if (!msgMs) return "sent";
 
+    // ✅ GROUP: read when ALL other members read after this msg
+    if (chat?.type === "group") {
+      const others = (chat.members || []).filter((id) => id !== myUid);
+      if (!others.length) return "delivered";
+
+      const allRead = others.every((uid) => {
+        const readMs = toMs(chat?.lastReadAt?.[uid]);
+        return readMs && readMs >= msgMs;
+      });
+
+      return allRead ? "read" : "delivered";
+    }
+
+    // ✅ DM (your original)
+    const otherUid = chat?.members?.find((id) => id !== myUid) || null;
     const readAt = otherUid ? chat?.lastReadAt?.[otherUid] : null;
     const readMs = toMs(readAt);
 
     if (readMs && msgMs <= readMs) return "read";
     return "delivered";
   }
+
 
   // Handlers: edit + delete
   async function doDeleteForMe(m) {
@@ -491,12 +526,15 @@ export default function ChatPanel({ chatId, onBack }) {
         <div className="headerText">
           <div className="headerName">{otherName}</div>
           <div className="headerStatus">
-            {otherTyping
-              ? "typing..."
-              : isReallyOnline(otherUser)
-              ? "online"
-              : timeAgoFrom(otherUser?.lastSeen)}
+            {chat?.type === "group"
+              ? (otherTyping ? "typing..." : `${chat?.members?.length || 0} members`)
+              : (otherTyping
+                  ? "typing..."
+                  : isReallyOnline(otherUser)
+                  ? "online"
+                  : timeAgoFrom(otherUser?.lastSeen))}
           </div>
+
         </div>
 
         <div className="headerActions">
