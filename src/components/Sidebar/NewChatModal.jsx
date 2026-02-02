@@ -20,15 +20,18 @@ export default function NewChatModal({ onClose, onPickChat }) {
 
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase();
+
+    if (!s) return [];
+
     return users
-      .filter((u) => u.uid !== user.uid)
+      .filter((u) => u.uid !== user?.uid)
       .filter(
         (u) =>
-          !s ||
           (u.email || "").toLowerCase().includes(s) ||
           (u.displayName || "").toLowerCase().includes(s)
       );
   }, [q, users, user]);
+
 
   const pick = async (other) => {
     setErr("");
@@ -85,25 +88,32 @@ export default function NewChatModal({ onClose, onPickChat }) {
         </div>
 
         <div style={{ maxHeight: 360, overflow: "auto" }}>
-          {filtered.map((u) => (
-            <button
-              key={u.uid}
-              onClick={() => pick(u)}
-              style={userRow}
-              type="button"
-            >
-              <div style={avatar} />
-              <div>
-                <div style={{ fontWeight: 700, fontSize: 13 }}>
-                  {u.displayName}
+          {!q.trim() ? (
+            <div style={{ padding: 14, fontSize: 13, color: "var(--muted)" }}>
+              Type a name or email to search.
+            </div>
+          ) : filtered.length === 0 ? (
+            <div style={{ padding: 14, fontSize: 13, color: "var(--muted)" }}>
+              No users found.
+            </div>
+          ) : (
+            filtered.map((u) => (
+              <button
+                key={u.uid}
+                onClick={() => pick(u)}
+                style={userRow}
+                type="button"
+              >
+                <div style={avatar} />
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: 13 }}>{u.displayName}</div>
+                  <div style={{ fontSize: 12, color: "var(--muted)" }}>{u.email}</div>
                 </div>
-                <div style={{ fontSize: 12, color: "var(--muted)" }}>
-                  {u.email}
-                </div>
-              </div>
-            </button>
-          ))}
+              </button>
+            ))
+          )}
         </div>
+
       </div>
     </div>
   );
