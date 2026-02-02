@@ -138,6 +138,18 @@ function formatDayLabel(ms) {
   });
 }
 
+function senderName(uid) {
+  if (!uid) return "Unknown";
+  if (uid === myUid) return "You";
+
+  const members = chat?.members || [];
+  const names = chat?.memberNames || [];
+
+  const idx = members.indexOf(uid);
+  return (idx >= 0 ? names[idx] : null) || "Member";
+}
+
+
 export default function ChatPanel({ chatId, onBack }) {
   const { user } = useAuth();
   const myUid = user?.uid;
@@ -176,6 +188,16 @@ export default function ChatPanel({ chatId, onBack }) {
   const [chatMenuOpen, setChatMenuOpen] = useState(false);
 
 
+  function senderName(uid) {
+    if (!uid) return "Unknown";
+    if (uid === myUid) return "You";
+
+    const members = chat?.members || [];
+    const names = chat?.memberNames || [];
+
+    const idx = members.indexOf(uid);
+    return (idx >= 0 ? names[idx] : null) || "Member";
+  }
 
   // Close message menu on outside click
   useEffect(() => {
@@ -646,7 +668,7 @@ export default function ChatPanel({ chatId, onBack }) {
       
       <div className="chatBody" ref={chatBodyRef} onScroll={handleChatScroll}>
         {visibleMessages.map((m, i) => {
-          const mine = m.senderId === user.uid;
+          const mine = m.senderId === myUid;
           const status = mine ? getTickStatus(m) : null;
 
           const isEditing = editingId === m.id;
@@ -668,7 +690,10 @@ export default function ChatPanel({ chatId, onBack }) {
                 className={`msgRow ${mine ? "right" : ""}`}
               >
                 <div className={`bubble ${mine ? "out" : "in"}`}>
-                  {/* Menu button */}
+                  {chat?.type === "group" && !mine && !m.isDeleted && (
+                    <div className="senderLabel">{senderName(m.senderId)}</div>
+                  )}
+
                   <button
                     className="msgMenuBtn"
                     type="button"

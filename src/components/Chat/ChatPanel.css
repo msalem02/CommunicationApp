@@ -222,6 +222,20 @@
   color: #9aa3af;
 }
 
+.senderLabel{
+  font-size: 12px;
+  font-weight: 700;
+  opacity: 0.8;
+  margin-bottom: 4px;
+  user-select: none;
+}
+
+/* optional: make it slightly different color on incoming bubbles */
+.bubble.in .senderLabel{
+  opacity: 0.75;
+}
+
+
 .sendBtn{
   width: 38px;
   height: 38px;
