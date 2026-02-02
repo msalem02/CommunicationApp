@@ -1,14 +1,26 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../firebase/firebase";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import "./Auth/AuthPage.css";
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [err, setErr] = useState("");
+  const [toast, setToast] = useState("");
+
   const nav = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    const msg = location.state?.toast;
+    if (msg) {
+      setToast(msg);
+      const t = setTimeout(() => setToast(""), 2500);
+      return () => clearTimeout(t);
+    }
+  }, [location.state]);
 
   const onSubmit = async (e) => {
     e.preventDefault();
@@ -23,6 +35,13 @@ export default function Login() {
 
   return (
     <div className="authPage">
+      {toast && (
+        <div className="tgToast" role="status" aria-live="polite">
+          <span className="tgToastIcon">✓</span>
+          <span className="tgToastText">{toast}</span>
+        </div>
+      )}
+
       <form className="authCard" onSubmit={onSubmit}>
         <h1 className="authTitle">Login</h1>
         <p className="authSub">Welcome back. Sign in to continue.</p>
@@ -46,7 +65,7 @@ export default function Login() {
         <button className="authBtn" type="submit">Sign in</button>
 
         <div className="authLinkRow">
-          Don’t have an account? <Link to="/Register">Create one</Link>
+          Don’t have an account? <Link to="/register">Create one</Link>
         </div>
       </form>
     </div>
